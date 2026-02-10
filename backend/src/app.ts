@@ -69,7 +69,7 @@ class App {
     const apiPrefix = process.env.API_PREFIX || '/api/v1';
 
     // Welcome route
-    this.app.get('/', (req: Request, res: Response) => {
+    this.app.get('/', (_req: Request, res: Response) => {
       res.json({
         success: true,
         message: 'Welcome to Sentrix Security API',
@@ -101,7 +101,7 @@ class App {
    * Initialize error handling
    */
   private initializeErrorHandling(): void {
-    this.app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+    this.app.use((err: Error, _req: Request, res: Response, next: NextFunction) => {
       console.error('Error:', err);
 
       // Check if headers already sent
