@@ -9,7 +9,9 @@
     "start": "node dist/server.js",
     "db:setup": "ts-node scripts/setup-database.ts",
     "db:drop": "ts-node scripts/drop-database.ts",
-    "db:reset": "npm run db:drop && npm run db:setup"
+    "db:reset": "npm run db:drop && npm run db:setup",
+    "db:seed": "ts-node scripts/seed-dummy-data.ts",
+    "db:init": "npm run db:setup && npm run db:seed"
   },
   "keywords": [
     "rbac",
