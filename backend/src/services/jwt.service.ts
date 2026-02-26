@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import crypto from 'crypto';
 
 interface TokenPayload {
@@ -16,8 +16,8 @@ interface DecodedToken extends TokenPayload {
 class JWTService {
   private readonly secret: string;
   private readonly refreshSecret: string;
-  private readonly expiresIn: string;
-  private readonly refreshExpiresIn: string;
+  private readonly expiresIn: string | number;
+  private readonly refreshExpiresIn: string | number;
 
   constructor() {
     this.secret = process.env.JWT_SECRET || 'your_super_secret_jwt_key';
@@ -30,20 +30,22 @@ class JWTService {
    * Generate access token
    */
   generateAccessToken(payload: TokenPayload): string {
-    return jwt.sign(payload, this.secret, {
-      expiresIn: this.expiresIn,
+    const options: SignOptions = {
+      expiresIn: this.expiresIn as SignOptions['expiresIn'],
       issuer: 'sentrix-security'
-    });
+    };
+    return jwt.sign(payload, this.secret, options);
   }
 
   /**
    * Generate refresh token
    */
   generateRefreshToken(payload: TokenPayload): string {
-    return jwt.sign(payload, this.refreshSecret, {
-      expiresIn: this.refreshExpiresIn,
+    const options: SignOptions = {
+      expiresIn: this.refreshExpiresIn as SignOptions['expiresIn'],
       issuer: 'sentrix-security'
-    });
+    };
+    return jwt.sign(payload, this.refreshSecret, options);
   }
 
   /**

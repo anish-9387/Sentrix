@@ -29,9 +29,6 @@ export const auditLogger = async (
     ''
   ).toString().split(',')[0].trim();
 
-  // Capture request start time
-  const startTime = Date.now();
-
   // Continue with request
   res.on('finish', async () => {
     try {
@@ -43,7 +40,7 @@ export const auditLogger = async (
       const resourceType = pathParts[2] || pathParts[1]; // /api/v1/resource
 
       // Sanitize request body (remove sensitive data)
-      let requestBody = null;
+      let requestBody: string | undefined = undefined;
       if (req.body && Object.keys(req.body).length > 0) {
         const sanitizedBody = { ...req.body };
         delete sanitizedBody.password;
@@ -81,7 +78,7 @@ export const auditLogger = async (
  * Audit specific actions
  */
 export const auditAction = (actionName: string, resourceType?: string) => {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       const ipAddress = (
         req.headers['x-forwarded-for'] ||

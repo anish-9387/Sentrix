@@ -1,5 +1,5 @@
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
-import { query } from '../database/connection';
+import { query } from '../connection';
 
 export interface User extends RowDataPacket {
   user_id: number;

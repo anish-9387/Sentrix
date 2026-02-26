@@ -19,7 +19,7 @@ class SecurityService {
   async checkSuspiciousActivity(
     ipAddress: string,
     username?: string,
-    userId?: number
+    _userId?: number
   ): Promise<SuspiciousActivityCheck> {
     const reasons: string[] = [];
     let riskScore = 0;
@@ -83,7 +83,7 @@ class SecurityService {
   async checkNewLocation(
     userId: number,
     currentCountry: string,
-    currentCity: string
+    _currentCity: string
   ): Promise<boolean> {
     // Get last successful login
     const recentLogins = await LogModel.getLoginLogsByUser(userId, 5);

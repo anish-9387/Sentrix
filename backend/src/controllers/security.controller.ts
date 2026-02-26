@@ -80,7 +80,7 @@ class SecurityController {
   /**
    * Get unresolved alerts
    */
-  async getUnresolvedAlerts(req: Request, res: Response): Promise<void> {
+  async getUnresolvedAlerts(_req: Request, res: Response): Promise<void> {
     try {
       const alerts = await LogModel.getUnresolvedAlerts();
 
@@ -138,7 +138,7 @@ class SecurityController {
   /**
    * Get blocked IPs
    */
-  async getBlockedIPs(req: Request, res: Response): Promise<void> {
+  async getBlockedIPs(_req: Request, res: Response): Promise<void> {
     try {
       const blockedIPs = await SecurityModel.getAllBlockedIPs();
 
@@ -231,7 +231,7 @@ class SecurityController {
   /**
    * Get active sessions
    */
-  async getActiveSessions(req: Request, res: Response): Promise<void> {
+  async getActiveSessions(_req: Request, res: Response): Promise<void> {
     try {
       const sql = `
         SELECT 
@@ -262,7 +262,7 @@ class SecurityController {
   /**
    * Get dashboard statistics
    */
-  async getDashboardStats(req: Request, res: Response): Promise<void> {
+  async getDashboardStats(_req: Request, res: Response): Promise<void> {
     try {
       // Total users
       const totalUsersQuery = 'SELECT COUNT(*) as count FROM users';

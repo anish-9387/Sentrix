@@ -6,7 +6,7 @@ class RoleController {
   /**
    * Get all roles
    */
-  async getAllRoles(req: Request, res: Response): Promise<void> {
+  async getAllRoles(_req: Request, res: Response): Promise<void> {
     try {
       const roles = await RoleModel.findAll();
 
@@ -254,7 +254,7 @@ class RoleController {
   /**
    * Get all permissions
    */
-  async getAllPermissions(req: Request, res: Response): Promise<void> {
+  async getAllPermissions(_req: Request, res: Response): Promise<void> {
     try {
       const permissions = await PermissionModel.findAll();
 
