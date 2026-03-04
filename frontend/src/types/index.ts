@@ -78,21 +78,27 @@ export interface LoginLog {
 export interface AuditLog {
   audit_id: number;
   log_id?: number;
+  // The DB might return either field name for the PK
   user_id?: number;
+  performed_by?: number;
   username?: string;
+  performed_by_username?: string;
   action: string;
   resource_type: string;
   resource_id?: number;
   endpoint?: string;
+  http_method?: string;
   method?: string;
   ip_address: string;
   user_agent?: string;
-  request_body?: string;
+  request_body?: Record<string, unknown> | string;
   response_status?: number;
+  status_code?: number;
   success?: boolean;
   error_message?: string;
   session_id?: number;
-  changes?: string;
+  changes?: Record<string, unknown> | string;
+  performed_at?: string;
   created_at: string;
 }
 
@@ -100,11 +106,14 @@ export interface BlockedIP {
   block_id: number;
   ip_id?: number;
   ip_address: string;
-  reason: string;
+  reason?: string;
   block_type?: 'manual' | 'auto' | 'temporary';
-  blocked_at: string;
+  blocked_at?: string;
+  created_at?: string;
   blocked_by?: number;
   expires_at?: string;
+  blocked_until?: string;
+  is_permanent?: boolean;
   is_active?: boolean;
   attempts_count?: number;
 }
@@ -112,14 +121,19 @@ export interface BlockedIP {
 export interface ActiveSession {
   session_id?: number;
   user_id: number;
-  username: string;
-  email: string;
+  username?: string;
+  email?: string;
   ip_address?: string;
   user_agent?: string;
+  browser?: string;
+  os?: string;
+  city?: string;
+  country?: string;
   is_active?: boolean;
-  last_login: string;
-  last_login_ip: string;
+  last_login?: string;
+  last_login_ip?: string;
   last_activity?: string;
+  last_active_at?: string;
   created_at?: string;
   expires_at?: string;
 }

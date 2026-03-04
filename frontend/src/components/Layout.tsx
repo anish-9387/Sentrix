@@ -1,5 +1,4 @@
-import type { ReactNode } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/authStore';
 import { useAppStore } from '../store/appStore';
@@ -21,21 +20,17 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { securityService } from '../services/securityService';
 
-interface LayoutProps {
-  children: ReactNode;
-}
-
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: Users, label: 'Users', path: '/users' },
   { icon: ShieldCheck, label: 'Roles & Permissions', path: '/roles' },
   { icon: AlertTriangle, label: 'Security Alerts', path: '/alerts' },
-  { icon: Activity, label: 'Login Logs', path: '/logs/login' },
-  { icon: FileText, label: 'Audit Logs', path: '/logs/audit' },
+  { icon: Activity, label: 'Login Logs', path: '/login-logs' },
+  { icon: FileText, label: 'Audit Logs', path: '/audit-logs' },
   { icon: Settings, label: 'Security Settings', path: '/security' },
 ];
 
-export const MainLayout = ({ children }: LayoutProps) => {
+export const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
@@ -218,7 +213,7 @@ export const MainLayout = ({ children }: LayoutProps) => {
             transition={{ duration: 0.25 }}
             className="p-6"
           >
-            {children}
+            <Outlet />
           </motion.div>
         </main>
       </div>

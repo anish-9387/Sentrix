@@ -180,13 +180,15 @@ interface InputProps {
   label?: string;
   type?: string;
   placeholder?: string;
-  value: string;
+  value: string | number;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   error?: string;
   icon?: LucideIcon;
   required?: boolean;
   disabled?: boolean;
   className?: string;
+  min?: number | string;
+  max?: number | string;
 }
 
 export const Input = ({
@@ -200,6 +202,8 @@ export const Input = ({
   required,
   disabled,
   className = '',
+  min,
+  max,
 }: InputProps) => (
   <div className={`w-full ${className}`}>
     {label && (
@@ -220,6 +224,8 @@ export const Input = ({
         placeholder={placeholder}
         required={required}
         disabled={disabled}
+        min={min}
+        max={max}
         className={`w-full ${Icon ? 'pl-10' : 'pl-4'} pr-4 py-2.5 bg-white border ${
           error ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-200 focus:ring-indigo-500'
         } rounded-xl text-sm focus:outline-none focus:ring-2 focus:border-transparent transition-all disabled:opacity-50 disabled:bg-slate-50`}

@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 
-import { Layout } from './components/Layout';
+import { MainLayout } from './components/Layout';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
 
 import { LoginPage } from './pages/LoginPage';
@@ -45,7 +45,7 @@ function App() {
           <Route
             element={
               <ProtectedRoute>
-                <Layout />
+                <MainLayout />
               </ProtectedRoute>
             }
           >

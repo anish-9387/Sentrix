@@ -101,14 +101,16 @@ export const SecurityPage = () => {
                 <div className="flex items-center gap-3">
                   {ip.is_permanent ? (
                     <Badge variant="rose" dot>Permanent</Badge>
-                  ) : (
+                  ) : ip.expires_at || ip.blocked_until ? (
                     <Badge variant="amber" dot>
-                      Until {ip.blocked_until ? format(new Date(ip.blocked_until), 'MMM dd HH:mm') : '—'}
+                      Until {format(new Date(ip.expires_at || ip.blocked_until!), 'MMM dd HH:mm')}
                     </Badge>
+                  ) : (
+                    <Badge variant="amber" dot>Temporary</Badge>
                   )}
                   <div className="hidden md:flex items-center gap-1 text-xs text-slate-400">
                     <Clock size={12} />
-                    {format(new Date(ip.blocked_at || ip.created_at), 'MMM dd, yyyy')}
+                    {format(new Date(ip.blocked_at || ip.created_at || new Date()), 'MMM dd, yyyy')}
                   </div>
                   <Button
                     size="sm"

@@ -43,7 +43,7 @@ export const AuditLogsPage = () => {
 
   const logs: AuditLog[] = logsRes?.data || [];
 
-  const uniqueUsers = new Set(logs.map((l) => l.performed_by)).size;
+  const uniqueUsers = new Set(logs.map((l) => l.user_id || l.performed_by)).size;
   const actions = logs.reduce<Record<string, number>>((acc, l) => {
     const a = l.action?.split('_')[0] || 'OTHER';
     acc[a] = (acc[a] || 0) + 1;
@@ -68,17 +68,17 @@ export const AuditLogsPage = () => {
           <div className="divide-y divide-slate-50">
             {logs.map((log, idx) => {
               const Icon = actionIcons[log.action?.split('_')[0]] || Activity;
-              const isOpen = expandedId === log.log_id;
+              const isOpen = expandedId === (log.audit_id || log.log_id!);
 
               return (
                 <motion.div
-                  key={log.log_id}
+                  key={log.audit_id || log.log_id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: idx * 0.015 }}
                 >
                   <button
-                    onClick={() => setExpandedId(isOpen ? null : log.log_id)}
+                    onClick={() => setExpandedId(isOpen ? null : (log.audit_id || log.log_id!))}
                     className="w-full flex items-center gap-4 px-6 py-4 hover:bg-slate-50/60 transition-colors text-left cursor-pointer"
                   >
                     <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 shrink-0">
@@ -88,8 +88,8 @@ export const AuditLogsPage = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-slate-900">{log.action}</span>
-                        <Badge variant={(methodColors[log.http_method] || 'slate') as any}>
-                          {log.http_method}
+                        <Badge variant={(methodColors[log.http_method || log.method || ''] || 'slate') as any}>
+                          {log.http_method || log.method}
                         </Badge>
                         {log.resource_type && (
                           <span className="text-xs text-slate-400">{log.resource_type}</span>
@@ -102,7 +102,7 @@ export const AuditLogsPage = () => {
 
                     <div className="hidden md:flex items-center gap-3 shrink-0">
                       <div className="text-right">
-                        <div className="text-sm font-medium text-slate-600">{log.performed_by_username || `User #${log.performed_by}`}</div>
+                        <div className="text-sm font-medium text-slate-600">{log.performed_by_username || log.username || `User #${log.performed_by || log.user_id}`}</div>
                         <div className="flex items-center gap-1 text-xs text-slate-400 justify-end">
                           <Globe size={10} />
                           {log.ip_address}
@@ -130,20 +130,20 @@ export const AuditLogsPage = () => {
                       >
                         <div className="px-6 pb-4 space-y-3">
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <Detail label="Method" value={log.http_method} />
-                            <Detail label="Endpoint" value={log.endpoint} />
+                            <Detail label="Method" value={log.http_method || log.method || '—'} />
+                            <Detail label="Endpoint" value={log.endpoint || '—'} />
                             <Detail label="Resource Type" value={log.resource_type || '—'} />
                             <Detail label="Resource ID" value={log.resource_id?.toString() || '—'} />
-                            <Detail label="IP Address" value={log.ip_address} />
-                            <Detail label="Status Code" value={log.status_code?.toString() || '—'} />
-                            <Detail label="Performed By" value={log.performed_by_username || `User #${log.performed_by}`} />
+                            <Detail label="IP Address" value={log.ip_address || '—'} />
+                            <Detail label="Status Code" value={(log.status_code || log.response_status)?.toString() || '—'} />
+                            <Detail label="Performed By" value={log.performed_by_username || log.username || `User #${log.performed_by || log.user_id}`} />
                             <Detail
                               label="Date"
                               value={format(new Date(log.performed_at || log.created_at), 'MMM dd, yyyy HH:mm:ss')}
                             />
                           </div>
 
-                          {log.changes && Object.keys(log.changes).length > 0 && (
+                          {log.changes && typeof log.changes === 'object' && Object.keys(log.changes).length > 0 && (
                             <div>
                               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Changes</span>
                               <pre className="mt-1 text-xs font-mono bg-slate-50 rounded-xl p-3 overflow-x-auto text-slate-600 max-h-48">
@@ -152,7 +152,7 @@ export const AuditLogsPage = () => {
                             </div>
                           )}
 
-                          {log.request_body && Object.keys(log.request_body).length > 0 && (
+                          {log.request_body && typeof log.request_body === 'object' && Object.keys(log.request_body).length > 0 && (
                             <div>
                               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Request Body</span>
                               <pre className="mt-1 text-xs font-mono bg-slate-50 rounded-xl p-3 overflow-x-auto text-slate-600 max-h-48">
