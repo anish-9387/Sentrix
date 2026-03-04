@@ -1,63 +1,31 @@
 import { api } from '../lib/axios';
-import { User } from '../types';
+import type { User } from '../types';
 
 export const userService = {
-  // Get all users
-  async getAllUsers(params?: { limit?: number; offset?: number }) {
-    const response = await api.get('/users', { params });
-    return response.data;
-  },
+  getAll: (params?: { limit?: number; page?: number }) =>
+    api.get('/users', { params }).then((r) => r.data),
 
-  // Search users
-  async searchUsers(params: { q: string; limit?: number; offset?: number }) {
-    const response = await api.get('/users/search', { params });
-    return response.data;
-  },
+  search: (q: string) =>
+    api.get('/users/search', { params: { q } }).then((r) => r.data),
 
-  // Get user by ID
-  async getUserById(id: number) {
-    const response = await api.get(`/users/${id}`);
-    return response.data;
-  },
+  getById: (id: number) =>
+    api.get(`/users/${id}`).then((r) => r.data),
 
-  // Create user
-  async createUser(userData: {
-    username: string;
-    email: string;
-    password: string;
-    full_name?: string;
-  }) {
-    const response = await api.post('/users', userData);
-    return response.data;
-  },
+  create: (data: { username: string; email: string; password: string; fullName?: string; roleIds?: number[] }) =>
+    api.post('/users', data).then((r) => r.data),
 
-  // Update user
-  async updateUser(id: number, userData: Partial<User>) {
-    const response = await api.put(`/users/${id}`, userData);
-    return response.data;
-  },
+  update: (id: number, data: Partial<User>) =>
+    api.put(`/users/${id}`, data).then((r) => r.data),
 
-  // Delete user
-  async deleteUser(id: number) {
-    const response = await api.delete(`/users/${id}`);
-    return response.data;
-  },
+  delete: (id: number) =>
+    api.delete(`/users/${id}`).then((r) => r.data),
 
-  // Toggle user status
-  async toggleUserStatus(id: number, status: string) {
-    const response = await api.patch(`/users/${id}/status`, { status });
-    return response.data;
-  },
+  toggleStatus: (id: number, status: 'active' | 'blocked' | 'suspended') =>
+    api.patch(`/users/${id}/status`, { status }).then((r) => r.data),
 
-  // Assign role to user
-  async assignRole(userId: number, roleId: number) {
-    const response = await api.post(`/users/${userId}/roles`, { role_id: roleId });
-    return response.data;
-  },
+  assignRole: (userId: number, roleId: number) =>
+    api.post(`/users/${userId}/roles`, { roleId }).then((r) => r.data),
 
-  // Remove role from user
-  async removeRole(userId: number, roleId: number) {
-    const response = await api.delete(`/users/${userId}/roles`, { data: { role_id: roleId } });
-    return response.data;
-  },
+  removeRole: (userId: number, roleId: number) =>
+    api.delete(`/users/${userId}/roles`, { data: { roleId } }).then((r) => r.data),
 };

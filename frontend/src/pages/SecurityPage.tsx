@@ -1,118 +1,125 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import { securityService } from '../services/securityService';
-import { Card, Button, Badge, Spinner, EmptyState, Input } from '../components/UI';
-import { Shield, Ban, CheckCircle, Globe, Users } from 'lucide-react';
+import { Card, Badge, Button, Input, Modal, Spinner, EmptyState, PageHeader, StatCard } from '../components/UI';
+import {
+  Shield, Wifi, WifiOff, Globe, Clock, Monitor, User, Ban, Plus, Trash2,
+  Activity, X,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { BlockedIP, ActiveSession } from '../types';
+import type { BlockedIP, ActiveSession } from '../types';
 
 export const SecurityPage = () => {
-  const [showBlockModal, setShowBlockModal] = useState(false);
   const queryClient = useQueryClient();
+  const [showBlockModal, setShowBlockModal] = useState(false);
 
-  const { data: blockedIPsData, isLoading: loadingIPs } = useQuery({
+  // Queries
+  const { data: blockedRes, isLoading: loadingBlocked } = useQuery({
     queryKey: ['blocked-ips'],
-    queryFn: async () => await securityService.getBlockedIPs(),
+    queryFn: securityService.getBlockedIPs,
   });
 
-  const { data: sessionsData, isLoading: loadingSessions } = useQuery({
+  const { data: sessionsRes, isLoading: loadingSessions } = useQuery({
     queryKey: ['active-sessions'],
-    queryFn: async () => await securityService.getActiveSessions(),
+    queryFn: securityService.getActiveSessions,
   });
 
-  const unblockMutation = useMutation({
-    mutationFn: (ipAddress: string) => securityService.unblockIP(ipAddress),
+  // Mutations
+  const blockIPMut = useMutation({
+    mutationFn: securityService.blockIP,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['blocked-ips'] });
-      toast.success('IP unblocked successfully');
+      toast.success('IP blocked successfully');
+      setShowBlockModal(false);
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to unblock IP');
-    },
+    onError: () => toast.error('Failed to block IP'),
   });
 
-  if (loadingIPs || loadingSessions) {
-    return <Spinner />;
-  }
+  const unblockIPMut = useMutation({
+    mutationFn: securityService.unblockIP,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blocked-ips'] });
+      toast.success('IP unblocked');
+    },
+    onError: () => toast.error('Failed to unblock IP'),
+  });
 
-  const blockedIPs = blockedIPsData?.data || [];
-  const activeSessions = sessionsData?.data || [];
+  if (loadingBlocked || loadingSessions) return <Spinner />;
+
+  const blockedIPs: BlockedIP[] = blockedRes?.data || [];
+  const sessions: ActiveSession[] = sessionsRes?.data || [];
+
+  const permanent = blockedIPs.filter((b) => b.is_permanent);
+  const temporary = blockedIPs.filter((b) => !b.is_permanent);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Security Settings</h1>
-        <p className="text-gray-600">Manage IP blocks and active sessions</p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Blocked IPs</p>
-              <p className="text-3xl font-bold text-gray-900">{blockedIPs.length}</p>
-            </div>
-            <div className="p-3 bg-red-100 rounded-lg">
-              <Ban size={32} className="text-red-600" />
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Active Sessions</p>
-              <p className="text-3xl font-bold text-gray-900">{activeSessions.length}</p>
-            </div>
-            <div className="p-3 bg-green-100 rounded-lg">
-              <Users size={32} className="text-green-600" />
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Blocked IPs */}
-      <Card
-        title="Blocked IP Addresses"
-        actions={
-          <Button size="sm" icon={Ban} onClick={() => setShowBlockModal(true)}>
+      <PageHeader
+        title="Security Management"
+        subtitle="Manage blocked IPs and monitor active sessions"
+        action={
+          <Button onClick={() => setShowBlockModal(true)} icon={Plus}>
             Block IP
           </Button>
         }
-      >
+      />
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard icon={Ban} label="Blocked IPs" value={blockedIPs.length} color="rose" />
+        <StatCard icon={Shield} label="Permanent Blocks" value={permanent.length} color="amber" />
+        <StatCard icon={Clock} label="Temporary Blocks" value={temporary.length} color="sky" />
+        <StatCard icon={Wifi} label="Active Sessions" value={sessions.length} color="emerald" />
+      </div>
+
+      {/* Blocked IPs */}
+      <Card title="Blocked IPs" subtitle={`${blockedIPs.length} addresses currently blocked`} noPadding>
         {blockedIPs.length > 0 ? (
-          <div className="space-y-3">
-            {blockedIPs.map((ip: BlockedIP) => (
-              <div
-                key={ip.ip_id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+          <div className="divide-y divide-slate-50">
+            {blockedIPs.map((ip, idx) => (
+              <motion.div
+                key={ip.ip_address + idx}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: idx * 0.03 }}
+                className="flex items-center justify-between px-6 py-4 hover:bg-slate-50/60 transition-colors"
               >
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-red-100 rounded-lg">
-                    <Globe size={20} className="text-red-600" />
+                  <div className="p-2 rounded-xl bg-rose-50 text-rose-600">
+                    <WifiOff size={16} />
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900">{ip.ip_address}</p>
-                    <p className="text-sm text-gray-600">{ip.reason}</p>
-                    <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
-                      <span>Blocked: {format(new Date(ip.blocked_at), 'MMM dd, yyyy HH:mm')}</span>
-                      {ip.expires_at && (
-                        <span>Expires: {format(new Date(ip.expires_at), 'MMM dd, yyyy HH:mm')}</span>
-                      )}
+                    <div className="text-sm font-semibold text-slate-900 font-mono">{ip.ip_address}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">
+                      {ip.reason || 'No reason specified'}
                     </div>
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  variant="success"
-                  icon={CheckCircle}
-                  onClick={() => unblockMutation.mutate(ip.ip_address)}
-                >
-                  Unblock
-                </Button>
-              </div>
+
+                <div className="flex items-center gap-3">
+                  {ip.is_permanent ? (
+                    <Badge variant="rose" dot>Permanent</Badge>
+                  ) : (
+                    <Badge variant="amber" dot>
+                      Until {ip.blocked_until ? format(new Date(ip.blocked_until), 'MMM dd HH:mm') : '—'}
+                    </Badge>
+                  )}
+                  <div className="hidden md:flex items-center gap-1 text-xs text-slate-400">
+                    <Clock size={12} />
+                    {format(new Date(ip.blocked_at || ip.created_at), 'MMM dd, yyyy')}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => unblockIPMut.mutate(ip.ip_address)}
+                    loading={unblockIPMut.isPending}
+                  >
+                    <Trash2 size={14} className="text-rose-500" />
+                  </Button>
+                </div>
+              </motion.div>
             ))}
           </div>
         ) : (
@@ -120,132 +127,156 @@ export const SecurityPage = () => {
         )}
       </Card>
 
-      {/* Active Sessions */}
-      <Card title="Active Sessions">
-        {activeSessions.length > 0 ? (
+      {/* Active sessions */}
+      <Card title="Active Sessions" subtitle={`${sessions.length} active sessions`} noPadding>
+        {sessions.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">IP Address</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Activity</th>
+              <thead>
+                <tr className="border-b border-slate-100">
+                  {['User', 'IP Address', 'Location', 'Browser / OS', 'Started', 'Last Active', 'Status'].map((h) => (
+                    <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">{h}</th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {activeSessions.map((session: ActiveSession, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                          <Users size={16} className="text-green-600" />
+              <tbody className="divide-y divide-slate-50">
+                {sessions.map((s, idx) => (
+                  <motion.tr
+                    key={s.session_id || idx}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: idx * 0.02 }}
+                    className="hover:bg-slate-50/60 transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
+                          <User size={14} className="text-white" />
                         </div>
-                        <span className="font-medium text-gray-900">{session.username}</span>
+                        <span className="text-sm font-medium text-slate-900">{s.username || `User #${s.user_id}`}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {session.email}
+                    <td className="px-6 py-4 text-sm text-slate-600 font-mono">{s.ip_address}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                        <Globe size={14} />
+                        {s.city && s.country ? `${s.city}, ${s.country}` : s.country || '—'}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {session.last_login_ip}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                        <Monitor size={14} />
+                        {[s.browser, s.os].filter(Boolean).join(' / ') || '—'}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(session.last_login), 'MMM dd, yyyy HH:mm')}
+                    <td className="px-6 py-4 text-xs text-slate-400">
+                      {s.created_at ? format(new Date(s.created_at), 'MMM dd HH:mm') : '—'}
                     </td>
-                  </tr>
+                    <td className="px-6 py-4 text-xs text-slate-400">
+                      {s.last_active_at ? format(new Date(s.last_active_at), 'MMM dd HH:mm') : '—'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant="emerald" dot>Active</Badge>
+                    </td>
+                  </motion.tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <EmptyState message="No active sessions" icon={Users} />
+          <EmptyState message="No active sessions" icon={Activity} />
         )}
       </Card>
 
       {/* Block IP Modal */}
-      {showBlockModal && (
-        <BlockIPModal
-          onClose={() => setShowBlockModal(false)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['blocked-ips'] });
-            setShowBlockModal(false);
-          }}
-        />
-      )}
+      <BlockIPModal
+        open={showBlockModal}
+        onClose={() => setShowBlockModal(false)}
+        onSubmit={(data) => blockIPMut.mutate(data)}
+        loading={blockIPMut.isPending}
+      />
     </div>
   );
 };
 
-// Block IP Modal
-const BlockIPModal = ({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) => {
-  const [formData, setFormData] = useState({
-    ip_address: '',
-    reason: '',
-    duration: '',
-  });
+/* ────────────────── Block IP Modal ────────────────── */
 
-  const blockMutation = useMutation({
-    mutationFn: (data: any) => securityService.blockIP(data),
-    onSuccess: () => {
-      toast.success('IP blocked successfully');
-      onSuccess();
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to block IP');
-    },
-  });
+interface BlockModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (data: { ip_address: string; reason?: string; duration_hours?: number; is_permanent?: boolean }) => void;
+  loading: boolean;
+}
+
+const BlockIPModal = ({ open, onClose, onSubmit, loading }: BlockModalProps) => {
+  const [ip, setIp] = useState('');
+  const [reason, setReason] = useState('');
+  const [isPermanent, setIsPermanent] = useState(false);
+  const [duration, setDuration] = useState('24');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const data = {
-      ...formData,
-      duration: formData.duration ? parseInt(formData.duration) : undefined,
-    };
-    blockMutation.mutate(data);
+    onSubmit({
+      ip_address: ip,
+      reason: reason || undefined,
+      is_permanent: isPermanent,
+      duration_hours: isPermanent ? undefined : Number(duration),
+    });
+    setIp('');
+    setReason('');
+    setIsPermanent(false);
+    setDuration('24');
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold">Block IP Address</h3>
-        </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <Input
-            label="IP Address"
-            placeholder="192.168.1.1"
-            value={formData.ip_address}
-            onChange={(e) => setFormData({ ...formData, ip_address: e.target.value })}
-            required
-          />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
-            <textarea
-              value={formData.reason}
-              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              rows={3}
-              required
+    <Modal open={open} onClose={onClose} title="Block IP Address">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          label="IP Address"
+          value={ip}
+          onChange={(e) => setIp(e.target.value)}
+          placeholder="e.g. 192.168.1.100"
+          icon={Globe}
+          required
+        />
+        <Input
+          label="Reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Reason for blocking (optional)"
+        />
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isPermanent}
+              onChange={(e) => setIsPermanent(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
             />
-          </div>
-          <Input
-            label="Duration (hours, optional)"
-            type="number"
-            placeholder="24"
-            value={formData.duration}
-            onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-          />
-          <div className="flex gap-3 pt-4">
-            <Button type="submit" variant="danger" className="flex-1">
-              Block IP
-            </Button>
-            <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+            <span className="text-sm text-slate-700">Permanent block</span>
+          </label>
+        </div>
+
+        <AnimatePresence>
+          {!isPermanent && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
+              <Input
+                label="Duration (hours)"
+                type="number"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                icon={Clock}
+                min={1}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="flex justify-end gap-3 pt-2">
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="submit" variant="danger" loading={loading} icon={Ban}>Block IP</Button>
+        </div>
+      </form>
+    </Modal>
   );
 };

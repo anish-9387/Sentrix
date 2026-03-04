@@ -1,156 +1,129 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { roleService } from '../services/roleService';
-import { Card, Button, Badge, Spinner, EmptyState, Input } from '../components/UI';
-import { Shield, Plus, Edit, Trash2, Key } from 'lucide-react';
+import {
+  Card, Button, Badge, Spinner, EmptyState, Input, Modal, PageHeader, TextArea,
+} from '../components/UI';
+import { ShieldCheck, Plus, Trash2, Key, Settings2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Role, Permission } from '../types';
+import type { Role, Permission } from '../types';
 
 export const RolesPage = () => {
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [showPermissionModal, setShowPermissionModal] = useState(false);
-  const queryClient = useQueryClient();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [permRole, setPermRole] = useState<Role | null>(null);
+  const qc = useQueryClient();
 
-  const { data: rolesData, isLoading } = useQuery({
+  const { data: rolesRes, isLoading: loadingRoles } = useQuery({
     queryKey: ['roles'],
-    queryFn: async () => await roleService.getAllRoles(),
+    queryFn: () => roleService.getAll(),
   });
 
-  const { data: permissionsData } = useQuery({
+  const { data: permsRes, isLoading: loadingPerms } = useQuery({
     queryKey: ['permissions'],
-    queryFn: async () => await roleService.getAllPermissions(),
+    queryFn: () => roleService.getAllPermissions(),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => roleService.deleteRole(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['roles'] });
-      toast.success('Role deleted successfully');
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to delete role');
-    },
+  const deleteMut = useMutation({
+    mutationFn: (id: number) => roleService.delete(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['roles'] }); toast.success('Role deleted'); },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Delete failed'),
   });
 
-  const handleDelete = (role: Role) => {
-    if (role.is_system_role) {
-      toast.error('Cannot delete system role');
-      return;
-    }
-    if (confirm(`Are you sure you want to delete the role "${role.role_name}"?`)) {
-      deleteMutation.mutate(role.role_id);
-    }
-  };
+  if (loadingRoles || loadingPerms) return <Spinner />;
 
-  if (isLoading) {
-    return <Spinner />;
-  }
+  const roles: Role[] = rolesRes?.data || [];
+  const permissions: Permission[] = permsRes?.data || [];
 
-  const roles = rolesData?.data || [];
-  const permissions = permissionsData?.data || [];
-
-  // Group permissions by category
-  const permissionsByCategory = permissions.reduce((acc: any, perm: Permission) => {
-    if (!acc[perm.category]) {
-      acc[perm.category] = [];
-    }
-    acc[perm.category].push(perm);
+  // Group permissions by resource/category
+  const grouped = permissions.reduce<Record<string, Permission[]>>((acc, p) => {
+    const key = p.category || p.resource || 'other';
+    (acc[key] ||= []).push(p);
     return acc;
   }, {});
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Roles & Permissions</h1>
-          <p className="text-gray-600">Manage access control and permissions</p>
-        </div>
-        <Button icon={Plus} onClick={() => setShowCreateModal(true)}>
-          Create Role
-        </Button>
-      </div>
+      <PageHeader
+        title="Roles & Permissions"
+        subtitle="Configure access control and permission sets"
+        actions={
+          <Button icon={Plus} onClick={() => setCreateOpen(true)}>
+            Create Role
+          </Button>
+        }
+      />
 
-      {/* Roles */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {roles.length > 0 ? (
-          roles.map((role: Role) => (
-            <Card key={role.role_id} title={role.role_name}>
+      {/* Roles Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {roles.length > 0 ? roles.map((role, idx) => (
+          <motion.div
+            key={role.role_id}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.05 }}
+          >
+            <Card>
               <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-gray-600">{role.description || 'No description'}</p>
-                  <div className="mt-2">
-                    {role.is_system_role && (
-                      <Badge variant="blue">System Role</Badge>
-                    )}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                      <ShieldCheck size={20} className="text-indigo-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900">{role.role_name}</h3>
+                      <p className="text-sm text-slate-500">{role.description || 'No description'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {role.is_active && <Badge variant="emerald" dot>Active</Badge>}
+                    {role.is_system_role && <Badge variant="indigo">System</Badge>}
+                    <Badge variant="slate">Priority: {role.priority}</Badge>
                   </div>
                 </div>
 
+                {/* Permissions */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Permissions</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {role.permissions ? (
-                      role.permissions.split(',').map((perm, idx) => (
-                        <Badge key={idx} variant="purple">
-                          {perm}
-                        </Badge>
-                      ))
-                    ) : (
-                      <span className="text-sm text-gray-400">No permissions</span>
-                    )}
+                  <p className="text-xs font-medium text-slate-400 uppercase mb-2">Permissions</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {role.permissions ? role.permissions.split(',').map((p, i) => (
+                      <Badge key={i} variant="violet">{p.trim()}</Badge>
+                    )) : <span className="text-xs text-slate-400">No permissions</span>}
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    icon={Key}
-                    onClick={() => {
-                      setSelectedRole(role);
-                      setShowPermissionModal(true);
-                    }}
-                  >
-                    Manage Permissions
+                {/* Actions */}
+                <div className="flex gap-2 pt-1 border-t border-slate-50">
+                  <Button size="sm" variant="secondary" icon={Key} onClick={() => setPermRole(role)}>
+                    Permissions
                   </Button>
                   {!role.is_system_role && (
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      icon={Trash2}
-                      onClick={() => handleDelete(role)}
-                    >
+                    <Button size="sm" variant="danger" icon={Trash2} onClick={() => {
+                      if (confirm(`Delete "${role.role_name}"?`)) deleteMut.mutate(role.role_id);
+                    }}>
                       Delete
                     </Button>
                   )}
                 </div>
               </div>
             </Card>
-          ))
-        ) : (
-          <Card>
-            <EmptyState message="No roles found" icon={Shield} />
-          </Card>
+          </motion.div>
+        )) : (
+          <Card><EmptyState message="No roles found" icon={ShieldCheck} /></Card>
         )}
       </div>
 
       {/* Permissions Reference */}
-      <Card title="Available Permissions">
-        <div className="space-y-4">
-          {Object.keys(permissionsByCategory).map((category) => (
-            <div key={category}>
-              <h4 className="text-sm font-semibold text-gray-900 mb-2 uppercase">{category}</h4>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                {permissionsByCategory[category].map((perm: Permission) => (
-                  <div
-                    key={perm.permission_id}
-                    className="bg-gray-50 p-3 rounded-lg border border-gray-200"
-                  >
-                    <p className="font-medium text-sm text-gray-900">{perm.permission_name}</p>
-                    {perm.description && (
-                      <p className="text-xs text-gray-500 mt-1">{perm.description}</p>
-                    )}
+      <Card title="Available Permissions" subtitle="All system permissions grouped by resource">
+        <div className="space-y-6">
+          {Object.entries(grouped).map(([cat, perms]) => (
+            <div key={cat}>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">{cat}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+                {perms.map((p) => (
+                  <div key={p.permission_id} className="p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-colors">
+                    <p className="text-sm font-medium text-slate-900">{p.permission_name}</p>
+                    {p.description && <p className="text-xs text-slate-400 mt-0.5">{p.description}</p>}
                   </div>
                 ))}
               </div>
@@ -160,183 +133,95 @@ export const RolesPage = () => {
       </Card>
 
       {/* Create Role Modal */}
-      {showCreateModal && (
-        <CreateRoleModal
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['roles'] });
-            setShowCreateModal(false);
-          }}
-        />
-      )}
+      <CreateRoleModal open={createOpen} onClose={() => setCreateOpen(false)} />
 
       {/* Manage Permissions Modal */}
-      {showPermissionModal && selectedRole && (
-        <ManagePermissionsModal
-          role={selectedRole}
-          permissions={permissions}
-          onClose={() => {
-            setShowPermissionModal(false);
-            setSelectedRole(null);
-          }}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['roles'] });
-          }}
-        />
+      {permRole && (
+        <ManagePermModal role={permRole} permissions={permissions} onClose={() => setPermRole(null)} />
       )}
     </div>
   );
 };
 
-// Create Role Modal
-const CreateRoleModal = ({
-  onClose,
-  onSuccess,
-}: {
-  onClose: () => void;
-  onSuccess: () => void;
-}) => {
-  const [formData, setFormData] = useState({
-    role_name: '',
-    description: '',
-  });
+/* ─── Create Role Modal ─── */
+const CreateRoleModal = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+  const [form, setForm] = useState({ roleName: '', description: '', priority: '' });
+  const qc = useQueryClient();
 
-  const createMutation = useMutation({
-    mutationFn: (data: typeof formData) => roleService.createRole(data),
-    onSuccess: () => {
-      toast.success('Role created successfully');
-      onSuccess();
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to create role');
-    },
+  const mut = useMutation({
+    mutationFn: () => roleService.create({
+      roleName: form.roleName,
+      description: form.description || undefined,
+      priority: form.priority ? parseInt(form.priority) : undefined,
+    }),
+    onSuccess: () => { toast.success('Role created'); qc.invalidateQueries({ queryKey: ['roles'] }); onClose(); },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Create failed'),
   });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    createMutation.mutate(formData);
-  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold">Create New Role</h3>
+    <Modal open={open} onClose={onClose} title="Create New Role">
+      <form onSubmit={(e) => { e.preventDefault(); mut.mutate(); }} className="space-y-4">
+        <Input label="Role Name" value={form.roleName} onChange={(e) => setForm({ ...form, roleName: e.target.value })} required />
+        <TextArea label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        <Input label="Priority" type="number" placeholder="10" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} />
+        <div className="flex gap-3 pt-2">
+          <Button type="submit" className="flex-1" icon={Plus} loading={mut.isPending}>Create</Button>
+          <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <Input
-            label="Role Name"
-            value={formData.role_name}
-            onChange={(e) => setFormData({ ...formData, role_name: e.target.value })}
-            required
-          />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              rows={3}
-            />
-          </div>
-          <div className="flex gap-3 pt-4">
-            <Button type="submit" variant="primary" className="flex-1">
-              Create Role
-            </Button>
-            <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 };
 
-// Manage Permissions Modal
-const ManagePermissionsModal = ({
-  role,
-  permissions,
-  onClose,
-  onSuccess,
-}: {
-  role: Role;
-  permissions: Permission[];
-  onClose: () => void;
-  onSuccess: () => void;
-}) => {
-  const rolePermissions = role.permissions ? role.permissions.split(',') : [];
+/* ─── Manage Permissions Modal ─── */
+const ManagePermModal = ({ role, permissions, onClose }: { role: Role; permissions: Permission[]; onClose: () => void }) => {
+  const qc = useQueryClient();
+  const rolePerms = role.permissions ? role.permissions.split(',').map((p) => p.trim()) : [];
 
-  const assignMutation = useMutation({
-    mutationFn: (permissionId: number) => roleService.assignPermission(role.role_id, permissionId),
-    onSuccess: () => {
-      toast.success('Permission assigned');
-      onSuccess();
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to assign permission');
-    },
+  const assignMut = useMutation({
+    mutationFn: (permId: number) => roleService.assignPermission(role.role_id, permId),
+    onSuccess: () => { toast.success('Permission assigned'); qc.invalidateQueries({ queryKey: ['roles'] }); },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Assign failed'),
   });
 
-  const removeMutation = useMutation({
-    mutationFn: (permissionId: number) => roleService.removePermission(role.role_id, permissionId),
-    onSuccess: () => {
-      toast.success('Permission removed');
-      onSuccess();
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to remove permission');
-    },
+  const removeMut = useMutation({
+    mutationFn: (permId: number) => roleService.removePermission(role.role_id, permId),
+    onSuccess: () => { toast.success('Permission removed'); qc.invalidateQueries({ queryKey: ['roles'] }); },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Remove failed'),
   });
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
-          <h3 className="text-lg font-semibold">Manage Permissions - {role.role_name}</h3>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {permissions.map((perm) => {
-              const isAssigned = rolePermissions.includes(perm.permission_name);
-              return (
-                <div
-                  key={perm.permission_id}
-                  className={`p-4 rounded-lg border-2 ${
-                    isAssigned ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{perm.permission_name}</p>
-                      <p className="text-xs text-gray-500 mt-1">{perm.description}</p>
-                      <Badge variant="gray" className="mt-2">
-                        {perm.category}
-                      </Badge>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant={isAssigned ? 'danger' : 'primary'}
-                      onClick={() =>
-                        isAssigned
-                          ? removeMutation.mutate(perm.permission_id)
-                          : assignMutation.mutate(perm.permission_id)
-                      }
-                    >
-                      {isAssigned ? 'Remove' : 'Add'}
-                    </Button>
-                  </div>
+    <Modal open title={`Permissions — ${role.role_name}`} onClose={onClose} size="xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {permissions.map((p) => {
+          const assigned = rolePerms.includes(p.permission_name);
+          return (
+            <div
+              key={p.permission_id}
+              className={`p-4 rounded-xl border-2 transition-all ${
+                assigned ? 'border-indigo-400 bg-indigo-50/50' : 'border-slate-100 hover:border-slate-200'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-900">{p.permission_name}</p>
+                  {p.description && <p className="text-xs text-slate-400 mt-0.5">{p.description}</p>}
                 </div>
-              );
-            })}
-          </div>
-          <div className="flex justify-end pt-6">
-            <Button variant="secondary" onClick={onClose}>
-              Close
-            </Button>
-          </div>
-        </div>
+                <Button
+                  size="xs"
+                  variant={assigned ? 'danger' : 'primary'}
+                  onClick={() => assigned ? removeMut.mutate(p.permission_id) : assignMut.mutate(p.permission_id)}
+                >
+                  {assigned ? 'Remove' : 'Add'}
+                </Button>
+              </div>
+            </div>
+          );
+        })}
       </div>
-    </div>
+      <div className="flex justify-end pt-4">
+        <Button variant="secondary" onClick={onClose}>Done</Button>
+      </div>
+    </Modal>
   );
 };

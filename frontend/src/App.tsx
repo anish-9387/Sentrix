@@ -1,8 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
+
+import { Layout } from './components/Layout';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
-import { MainLayout } from './components/Layout';
+
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { UsersPage } from './pages/UsersPage';
@@ -11,14 +13,15 @@ import { AlertsPage } from './pages/AlertsPage';
 import { LoginLogsPage } from './pages/LoginLogsPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
 import { SecurityPage } from './pages/SecurityPage';
+
 import './App.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      staleTime: 30_000,
       refetchOnWindowFocus: false,
       retry: 1,
-      staleTime: 30000,
     },
   },
 });
@@ -28,77 +31,51 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          {/* Public Routes */}
-          <Route element={<PublicRoute />}>
-            <Route path="/login" element={<LoginPage />} />
+          {/* Public */}
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <LoginPage />
+              </PublicRoute>
+            }
+          />
+
+          {/* Protected with layout */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/users" element={<UsersPage />} />
+            <Route path="/roles" element={<RolesPage />} />
+            <Route path="/alerts" element={<AlertsPage />} />
+            <Route path="/login-logs" element={<LoginLogsPage />} />
+            <Route path="/audit-logs" element={<AuditLogsPage />} />
+            <Route path="/security" element={<SecurityPage />} />
           </Route>
 
-          {/* Protected Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route
-              path="/dashboard"
-              element={
-                <MainLayout>
-                  <DashboardPage />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/users"
-              element={
-                <MainLayout>
-                  <UsersPage />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/roles"
-              element={
-                <MainLayout>
-                  <RolesPage />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/alerts"
-              element={
-                <MainLayout>
-                  <AlertsPage />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/logs/login"
-              element={
-                <MainLayout>
-                  <LoginLogsPage />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/logs/audit"
-              element={
-                <MainLayout>
-                  <AuditLogsPage />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/security"
-              element={
-                <MainLayout>
-                  <SecurityPage />
-                </MainLayout>
-              }
-            />
-          </Route>
-
-          {/* Default redirect */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          {/* Fallback */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
-      <Toaster position="top-right" />
+
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            borderRadius: '16px',
+            background: '#1e293b',
+            color: '#f1f5f9',
+            fontSize: '14px',
+            padding: '12px 16px',
+          },
+        }}
+      />
     </QueryClientProvider>
   );
 }

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { AuthUser, User } from '../types';
+import type { AuthUser } from '../types';
 import { authService } from '../services/authService';
 import toast from 'react-hot-toast';
 
@@ -8,10 +8,9 @@ interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
-  setUser: (user: AuthUser | null) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -21,60 +20,77 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
 
-      login: async (email: string, password: string) => {
+      login: async (username, password) => {
         set({ isLoading: true });
         try {
-          const response = await authService.login({ email, password });
-          const { accessToken, refreshToken, user } = response.data;
-
+          const res = await authService.login({ username, password });
+          const { accessToken, refreshToken, user, sessionId } = res.data;
           localStorage.setItem('accessToken', accessToken);
           localStorage.setItem('refreshToken', refreshToken);
-
-          const authUser: AuthUser = { ...user, accessToken, refreshToken };
+          const authUser: AuthUser = {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            fullName: user.fullName,
+            roles: user.roles,
+            accessToken,
+            refreshToken,
+            sessionId,
+          };
           set({ user: authUser, isAuthenticated: true, isLoading: false });
-          toast.success('Login successful!');
-        } catch (error: any) {
+          toast.success(`Welcome back, ${user.fullName || user.username}!`);
+        } catch (err: any) {
           set({ isLoading: false });
-          toast.error(error.response?.data?.message || 'Login failed');
-          throw error;
+          toast.error(err.response?.data?.message || 'Login failed');
+          throw err;
         }
       },
 
       logout: async () => {
         try {
           await authService.logout();
-        } catch (error) {
-          console.error('Logout error:', error);
+        } catch {
+          // ignore
         } finally {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           set({ user: null, isAuthenticated: false });
-          toast.success('Logged out successfully');
+          toast.success('Logged out');
         }
       },
 
       refreshUser: async () => {
         try {
-          const response = await authService.getCurrentUser();
-          const user = response.data;
+          const res = await authService.me();
+          const u = res.data;
           const accessToken = localStorage.getItem('accessToken') || '';
           const refreshToken = localStorage.getItem('refreshToken') || '';
-          const authUser: AuthUser = { ...user, accessToken, refreshToken };
-          set({ user: authUser, isAuthenticated: true });
-        } catch (error) {
-          set({ user: null, isAuthenticated: false });
+          set({
+            user: {
+              id: u.id,
+              username: u.username,
+              email: u.email,
+              fullName: u.fullName || u.full_name,
+              roles: u.roles || [],
+              permissions: u.permissions || [],
+              status: u.status,
+              lastLogin: u.lastLogin,
+              createdAt: u.createdAt,
+              accessToken,
+              refreshToken,
+            },
+            isAuthenticated: true,
+          });
+        } catch {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
+          set({ user: null, isAuthenticated: false });
         }
-      },
-
-      setUser: (user: AuthUser | null) => {
-        set({ user, isAuthenticated: !!user });
       },
     }),
     {
-      name: 'auth-storage',
-      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
-    }
-  )
+      name: 'sentrix-auth',
+      partialize: (s) => ({ user: s.user, isAuthenticated: s.isAuthenticated }),
+    },
+  ),
 );

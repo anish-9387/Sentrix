@@ -1,204 +1,146 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { userService } from '../services/userService';
 import { roleService } from '../services/roleService';
-import { Card, Button, Badge, Spinner, EmptyState, Input } from '../components/UI';
-import { Users, Plus, Edit, Trash2, Search, UserPlus, Shield, Ban, CheckCircle } from 'lucide-react';
+import {
+  Card, Button, Badge, Spinner, EmptyState, Input, Modal, PageHeader, Select,
+} from '../components/UI';
+import {
+  Users, Plus, Trash2, Search, ShieldCheck, Ban, CheckCircle, UserRoundPlus, Eye,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { User, Role } from '../types';
+import type { User, Role } from '../types';
 
 export const UsersPage = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const queryClient = useQueryClient();
+  const [search, setSearch] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [roleModalUser, setRoleModalUser] = useState<User | null>(null);
+  const [detailUser, setDetailUser] = useState<User | null>(null);
+  const qc = useQueryClient();
 
-  const { data: usersData, isLoading } = useQuery({
-    queryKey: ['users', searchQuery],
-    queryFn: async () => {
-      if (searchQuery) {
-        return await userService.searchUsers({ q: searchQuery });
-      }
-      return await userService.getAllUsers();
-    },
+  const { data: usersRes, isLoading } = useQuery({
+    queryKey: ['users', search],
+    queryFn: () => (search ? userService.search(search) : userService.getAll()),
   });
 
-  const { data: rolesData } = useQuery({
+  const { data: rolesRes } = useQuery({
     queryKey: ['roles'],
-    queryFn: async () => await roleService.getAllRoles(),
+    queryFn: () => roleService.getAll(),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => userService.deleteUser(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('User deleted successfully');
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to delete user');
-    },
+  const deleteMut = useMutation({
+    mutationFn: (id: number) => userService.delete(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); toast.success('User deleted'); },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Delete failed'),
   });
 
-  const toggleStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: number; status: string }) =>
-      userService.toggleUserStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('User status updated');
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to update status');
-    },
+  const statusMut = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: 'active' | 'blocked' | 'suspended' }) =>
+      userService.toggleStatus(id, status),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); toast.success('Status updated'); },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Status update failed'),
   });
 
-  const handleDelete = (id: number) => {
-    if (confirm('Are you sure you want to delete this user?')) {
-      deleteMutation.mutate(id);
-    }
-  };
+  const statusColor = (s: string) =>
+    s === 'active' ? 'emerald' : s === 'blocked' ? 'rose' : s === 'suspended' ? 'amber' : 'slate';
 
-  const handleToggleStatus = (user: User) => {
-    const newStatus = user.status === 'active' ? 'blocked' : 'active';
-    toggleStatusMutation.mutate({ id: user.user_id, status: newStatus });
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'green';
-      case 'blocked':
-        return 'red';
-      case 'suspended':
-        return 'yellow';
-      default:
-        return 'gray';
-    }
-  };
-
-  if (isLoading) {
-    return <Spinner />;
-  }
-
-  const users = usersData?.data || [];
+  if (isLoading) return <Spinner />;
+  const users: User[] = usersRes?.data?.users || usersRes?.data || [];
+  const roles: Role[] = rolesRes?.data || [];
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-600">Manage system users and their access</p>
-        </div>
-        <Button icon={Plus} onClick={() => setShowCreateModal(true)}>
-          Create User
-        </Button>
-      </div>
+      <PageHeader
+        title="User Management"
+        subtitle={`${users.length} user${users.length !== 1 ? 's' : ''} in total`}
+        actions={
+          <Button icon={Plus} onClick={() => setCreateOpen(true)}>
+            Create User
+          </Button>
+        }
+      />
 
       {/* Search */}
       <Card>
-        <div className="relative">
-          <Input
-            placeholder="Search users by name, email, or username..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            icon={Search}
-          />
-        </div>
+        <Input
+          placeholder="Search by name, email, or username..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          icon={Search}
+        />
       </Card>
 
-      {/* Users Table */}
-      <Card>
+      {/* Table */}
+      <Card noPadding>
         {users.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Roles
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Login
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+              <thead>
+                <tr className="border-b border-slate-100">
+                  {['User', 'Status', 'Roles', 'Last Login', 'Actions'].map((h) => (
+                    <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">{h}</th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {users.map((user: User) => (
-                  <tr key={user.user_id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                          <Users className="text-indigo-600" size={20} />
+              <tbody className="divide-y divide-slate-50">
+                {users.map((u, idx) => (
+                  <motion.tr
+                    key={u.user_id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: idx * 0.03 }}
+                    className="hover:bg-slate-50/60 transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                          {(u.full_name || u.username)[0].toUpperCase()}
                         </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{user.full_name || user.username}</div>
-                          <div className="text-sm text-gray-500">{user.email}</div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{u.full_name || u.username}</p>
+                          <p className="text-xs text-slate-400">{u.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge variant={getStatusColor(user.status) as any}>
-                        {user.status}
-                      </Badge>
+                    <td className="px-6 py-4">
+                      <Badge variant={statusColor(u.status)} dot>{u.status}</Badge>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
-                        {user.roles ? (
-                          user.roles.split(',').map((role, idx) => (
-                            <Badge key={idx} variant="purple">
-                              {role}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-sm text-gray-400">No roles</span>
-                        )}
+                        {u.roles ? u.roles.split(',').map((r, i) => (
+                          <Badge key={i} variant="violet">{r.trim()}</Badge>
+                        )) : <span className="text-xs text-slate-400">None</span>}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {user.last_login ? format(new Date(user.last_login), 'MMM dd, yyyy HH:mm') : 'Never'}
+                    <td className="px-6 py-4 text-sm text-slate-500">
+                      {u.last_login ? format(new Date(u.last_login), 'MMM dd, yyyy HH:mm') : 'Never'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setShowRoleModal(true);
-                          }}
-                          icon={Shield}
-                        >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-1.5">
+                        <Button size="xs" variant="ghost" icon={Eye} onClick={() => setDetailUser(u)}>
+                          View
+                        </Button>
+                        <Button size="xs" variant="ghost" icon={ShieldCheck} onClick={() => setRoleModalUser(u)}>
                           Roles
                         </Button>
                         <Button
-                          size="sm"
-                          variant={user.status === 'active' ? 'danger' : 'success'}
-                          onClick={() => handleToggleStatus(user)}
-                          icon={user.status === 'active' ? Ban : CheckCircle}
+                          size="xs"
+                          variant={u.status === 'active' ? 'danger' : 'success'}
+                          icon={u.status === 'active' ? Ban : CheckCircle}
+                          onClick={() => statusMut.mutate({ id: u.user_id, status: u.status === 'active' ? 'blocked' : 'active' })}
                         >
-                          {user.status === 'active' ? 'Block' : 'Activate'}
+                          {u.status === 'active' ? 'Block' : 'Activate'}
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="danger"
-                          onClick={() => handleDelete(user.user_id)}
-                          icon={Trash2}
-                        >
+                        <Button size="xs" variant="ghost" icon={Trash2} onClick={() => {
+                          if (confirm('Delete this user?')) deleteMut.mutate(u.user_id);
+                        }}>
                           Delete
                         </Button>
                       </div>
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))}
               </tbody>
             </table>
@@ -209,214 +151,140 @@ export const UsersPage = () => {
       </Card>
 
       {/* Create User Modal */}
-      {showCreateModal && (
-        <CreateUserModal
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['users'] });
-            setShowCreateModal(false);
-          }}
-        />
-      )}
+      <CreateUserModal open={createOpen} onClose={() => setCreateOpen(false)} />
 
       {/* Assign Role Modal */}
-      {showRoleModal && selectedUser && (
+      {roleModalUser && (
         <AssignRoleModal
-          user={selectedUser}
-          roles={rolesData?.data || []}
-          onClose={() => {
-            setShowRoleModal(false);
-            setSelectedUser(null);
-          }}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['users'] });
-          }}
+          user={roleModalUser}
+          roles={roles}
+          onClose={() => setRoleModalUser(null)}
         />
+      )}
+
+      {/* Detail Modal */}
+      {detailUser && (
+        <Modal open title={`User Details — ${detailUser.username}`} onClose={() => setDetailUser(null)} size="lg">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            {[
+              ['Username', detailUser.username],
+              ['Email', detailUser.email],
+              ['Full Name', detailUser.full_name || '—'],
+              ['Status', detailUser.status],
+              ['Failed Attempts', detailUser.failed_login_attempts],
+              ['Last Login IP', detailUser.last_login_ip || '—'],
+              ['Last Login', detailUser.last_login ? format(new Date(detailUser.last_login), 'MMM dd, yyyy HH:mm') : 'Never'],
+              ['Created', format(new Date(detailUser.created_at), 'MMM dd, yyyy HH:mm')],
+            ].map(([k, v]) => (
+              <div key={k as string}>
+                <p className="text-slate-400 text-xs mb-0.5">{k}</p>
+                <p className="font-medium text-slate-900">{String(v)}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4">
+            <p className="text-xs text-slate-400 mb-1">Roles</p>
+            <div className="flex flex-wrap gap-1.5">
+              {detailUser.roles ? detailUser.roles.split(',').map((r, i) => (
+                <Badge key={i} variant="violet">{r.trim()}</Badge>
+              )) : <span className="text-xs text-slate-400">None</span>}
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
 };
 
-// Create User Modal Component
-const CreateUserModal = ({
-  onClose,
-  onSuccess,
-}: {
-  onClose: () => void;
-  onSuccess: () => void;
-}) => {
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    full_name: '',
-  });
+/* ─── Create User Modal ─── */
+const CreateUserModal = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+  const [form, setForm] = useState({ username: '', email: '', password: '', fullName: '' });
+  const qc = useQueryClient();
 
-  const createMutation = useMutation({
-    mutationFn: (data: typeof formData) => userService.createUser(data),
-    onSuccess: () => {
-      toast.success('User created successfully');
-      onSuccess();
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to create user');
-    },
+  const mut = useMutation({
+    mutationFn: () => userService.create(form),
+    onSuccess: () => { toast.success('User created'); qc.invalidateQueries({ queryKey: ['users'] }); onClose(); },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Create failed'),
   });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    createMutation.mutate(formData);
-  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold">Create New User</h3>
+    <Modal open={open} onClose={onClose} title="Create New User">
+      <form onSubmit={(e) => { e.preventDefault(); mut.mutate(); }} className="space-y-4">
+        <Input label="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
+        <Input label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+        <Input label="Full Name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
+        <Input label="Password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+        <div className="flex gap-3 pt-2">
+          <Button type="submit" className="flex-1" icon={UserRoundPlus} loading={mut.isPending}>Create</Button>
+          <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <Input
-            label="Username"
-            value={formData.username}
-            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-            required
-          />
-          <Input
-            label="Email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            required
-          />
-          <Input
-            label="Full Name"
-            value={formData.full_name}
-            onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-          />
-          <Input
-            label="Password"
-            type="password"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            required
-          />
-          <div className="flex gap-3 pt-4">
-            <Button type="submit" variant="primary" className="flex-1">
-              Create User
-            </Button>
-            <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 };
 
-// Assign Role Modal Component
-const AssignRoleModal = ({
-  user,
-  roles,
-  onClose,
-  onSuccess,
-}: {
-  user: User;
-  roles: Role[];
-  onClose: () => void;
-  onSuccess: () => void;
-}) => {
-  const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
-  const queryClient = useQueryClient();
+/* ─── Assign Role Modal ─── */
+const AssignRoleModal = ({ user, roles, onClose }: { user: User; roles: Role[]; onClose: () => void }) => {
+  const [selectedRoleId, setSelectedRoleId] = useState('');
+  const qc = useQueryClient();
 
-  const assignMutation = useMutation({
+  const assignMut = useMutation({
     mutationFn: (roleId: number) => userService.assignRole(user.user_id, roleId),
-    onSuccess: () => {
-      toast.success('Role assigned successfully');
-      onSuccess();
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to assign role');
-    },
+    onSuccess: () => { toast.success('Role assigned'); qc.invalidateQueries({ queryKey: ['users'] }); },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Assign failed'),
   });
 
-  const removeMutation = useMutation({
+  const removeMut = useMutation({
     mutationFn: (roleId: number) => userService.removeRole(user.user_id, roleId),
-    onSuccess: () => {
-      toast.success('Role removed successfully');
-      onSuccess();
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to remove role');
-    },
+    onSuccess: () => { toast.success('Role removed'); qc.invalidateQueries({ queryKey: ['users'] }); },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Remove failed'),
   });
 
-  const userRoles = user.roles ? user.roles.split(',') : [];
+  const userRoles = user.roles ? user.roles.split(',').map((r) => r.trim()) : [];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold">Manage Roles - {user.username}</h3>
+    <Modal open title={`Manage Roles — ${user.username}`} onClose={onClose}>
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm font-medium text-slate-700 mb-2">Current Roles</p>
+          <div className="flex flex-wrap gap-2">
+            {userRoles.length > 0 ? userRoles.map((name) => {
+              const role = roles.find((r) => r.role_name === name);
+              return (
+                <div key={name} className="flex items-center gap-1.5 bg-violet-50 text-violet-700 px-3 py-1.5 rounded-full text-sm font-medium">
+                  {name}
+                  {role && (
+                    <button onClick={() => removeMut.mutate(role.role_id)} className="hover:text-violet-900 cursor-pointer">&times;</button>
+                  )}
+                </div>
+              );
+            }) : <span className="text-sm text-slate-400">No roles assigned</span>}
+          </div>
         </div>
-        <div className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Current Roles</label>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {userRoles.length > 0 ? (
-                userRoles.map((roleName, idx) => {
-                  const role = roles.find((r) => r.role_name === roleName);
-                  return (
-                    <div key={idx} className="flex items-center gap-2 bg-purple-100 text-purple-800 px-3 py-1 rounded-full">
-                      <span className="text-sm">{roleName}</span>
-                      {role && (
-                        <button
-                          onClick={() => removeMutation.mutate(role.role_id)}
-                          className="text-purple-600 hover:text-purple-900"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  );
-                })
-              ) : (
-                <span className="text-sm text-gray-400">No roles assigned</span>
-              )}
-            </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Assign New Role</label>
-            <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              value={selectedRoleId || ''}
-              onChange={(e) => setSelectedRoleId(Number(e.target.value))}
-            >
-              <option value="">Select a role</option>
-              {roles.map((role) => (
-                <option key={role.role_id} value={role.role_id}>
-                  {role.role_name}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="flex gap-2">
+          <Select
+            label="Add Role"
+            value={selectedRoleId}
+            onChange={(e) => setSelectedRoleId(e.target.value)}
+            options={roles.map((r) => ({ value: r.role_id, label: r.role_name }))}
+            placeholder="Select a role..."
+          />
+        </div>
+        {selectedRoleId && (
+          <Button
+            size="sm"
+            icon={ShieldCheck}
+            onClick={() => { assignMut.mutate(Number(selectedRoleId)); setSelectedRoleId(''); }}
+          >
+            Assign Role
+          </Button>
+        )}
 
-          <div className="flex gap-3 pt-4">
-            <Button
-              variant="primary"
-              onClick={() => selectedRoleId && assignMutation.mutate(selectedRoleId)}
-              disabled={!selectedRoleId}
-              className="flex-1"
-            >
-              Assign Role
-            </Button>
-            <Button variant="secondary" onClick={onClose} className="flex-1">
-              Close
-            </Button>
-          </div>
+        <div className="flex justify-end pt-2">
+          <Button variant="secondary" onClick={onClose}>Close</Button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };

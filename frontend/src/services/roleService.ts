@@ -1,54 +1,27 @@
 import { api } from '../lib/axios';
-import { Role, Permission } from '../types';
 
 export const roleService = {
-  // Get all roles
-  async getAllRoles() {
-    const response = await api.get('/roles');
-    return response.data;
-  },
+  getAll: () =>
+    api.get('/roles').then((r) => r.data),
 
-  // Get all permissions
-  async getAllPermissions() {
-    const response = await api.get('/roles/permissions');
-    return response.data;
-  },
+  getById: (id: number) =>
+    api.get(`/roles/${id}`).then((r) => r.data),
 
-  // Get role by ID
-  async getRoleById(id: number) {
-    const response = await api.get(`/roles/${id}`);
-    return response.data;
-  },
+  create: (data: { roleName: string; description?: string; priority?: number }) =>
+    api.post('/roles', data).then((r) => r.data),
 
-  // Create role
-  async createRole(roleData: { role_name: string; description?: string }) {
-    const response = await api.post('/roles', roleData);
-    return response.data;
-  },
+  update: (id: number, data: { roleName?: string; description?: string; priority?: number; isActive?: boolean }) =>
+    api.put(`/roles/${id}`, data).then((r) => r.data),
 
-  // Update role
-  async updateRole(id: number, roleData: Partial<Role>) {
-    const response = await api.put(`/roles/${id}`, roleData);
-    return response.data;
-  },
+  delete: (id: number) =>
+    api.delete(`/roles/${id}`).then((r) => r.data),
 
-  // Delete role
-  async deleteRole(id: number) {
-    const response = await api.delete(`/roles/${id}`);
-    return response.data;
-  },
+  getAllPermissions: () =>
+    api.get('/roles/permissions').then((r) => r.data),
 
-  // Assign permission to role
-  async assignPermission(roleId: number, permissionId: number) {
-    const response = await api.post(`/roles/${roleId}/permissions`, { permission_id: permissionId });
-    return response.data;
-  },
+  assignPermission: (roleId: number, permissionId: number) =>
+    api.post(`/roles/${roleId}/permissions`, { permissionId }).then((r) => r.data),
 
-  // Remove permission from role
-  async removePermission(roleId: number, permissionId: number) {
-    const response = await api.delete(`/roles/${roleId}/permissions`, { 
-      data: { permission_id: permissionId } 
-    });
-    return response.data;
-  },
+  removePermission: (roleId: number, permissionId: number) =>
+    api.delete(`/roles/${roleId}/permissions`, { data: { permissionId } }).then((r) => r.data),
 };

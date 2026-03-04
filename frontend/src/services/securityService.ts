@@ -1,63 +1,33 @@
 import { api } from '../lib/axios';
 
 export const securityService = {
-  // Dashboard stats
-  async getDashboardStats() {
-    const response = await api.get('/security/dashboard/stats');
-    return response.data;
-  },
+  getDashboardStats: () =>
+    api.get('/security/dashboard/stats').then((r) => r.data),
 
-  // Login logs
-  async getLoginLogs(params?: { limit?: number; offset?: number; status?: string }) {
-    const response = await api.get('/security/logs/login', { params });
-    return response.data;
-  },
+  getLoginLogs: (params?: { limit?: number; page?: number; status?: string }) =>
+    api.get('/security/logs/login', { params }).then((r) => r.data),
 
-  // Audit logs
-  async getAuditLogs(params?: { limit?: number; offset?: number }) {
-    const response = await api.get('/security/logs/audit', { params });
-    return response.data;
-  },
+  getAuditLogs: (params?: { limit?: number; page?: number }) =>
+    api.get('/security/logs/audit', { params }).then((r) => r.data),
 
-  // Security alerts
-  async getSecurityAlerts(params?: { limit?: number; offset?: number; severity?: string }) {
-    const response = await api.get('/security/alerts', { params });
-    return response.data;
-  },
+  getAlerts: (params?: { limit?: number; page?: number; severity?: string }) =>
+    api.get('/security/alerts', { params }).then((r) => r.data),
 
-  // Get unresolved alerts
-  async getUnresolvedAlerts() {
-    const response = await api.get('/security/alerts/unresolved');
-    return response.data;
-  },
+  getUnresolvedAlerts: () =>
+    api.get('/security/alerts/unresolved').then((r) => r.data),
 
-  // Resolve alert
-  async resolveAlert(id: number) {
-    const response = await api.put(`/security/alerts/${id}/resolve`);
-    return response.data;
-  },
+  resolveAlert: (id: number) =>
+    api.put(`/security/alerts/${id}/resolve`).then((r) => r.data),
 
-  // Get blocked IPs
-  async getBlockedIPs() {
-    const response = await api.get('/security/ips/blocked');
-    return response.data;
-  },
+  getBlockedIPs: () =>
+    api.get('/security/ips/blocked').then((r) => r.data),
 
-  // Block IP
-  async blockIP(ipData: { ip_address: string; reason: string; duration?: number }) {
-    const response = await api.post('/security/ips/block', ipData);
-    return response.data;
-  },
+  blockIP: (data: { ipAddress: string; reason: string }) =>
+    api.post('/security/ips/block', data).then((r) => r.data),
 
-  // Unblock IP
-  async unblockIP(ipAddress: string) {
-    const response = await api.post('/security/ips/unblock', { ip_address: ipAddress });
-    return response.data;
-  },
+  unblockIP: (ipAddress: string) =>
+    api.post('/security/ips/unblock', { ipAddress }).then((r) => r.data),
 
-  // Get active sessions
-  async getActiveSessions() {
-    const response = await api.get('/security/sessions/active');
-    return response.data;
-  },
+  getActiveSessions: () =>
+    api.get('/security/sessions/active').then((r) => r.data),
 };
