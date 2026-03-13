@@ -9,11 +9,11 @@ import {
   ShieldCheck,
   Clock,
   Globe,
-  TrendingUp,
   ShieldAlert,
   Wifi,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import type { DashboardStats } from '../types';
 
 const container = {
   hidden: { opacity: 0 },
@@ -30,7 +30,7 @@ export const DashboardPage = () => {
 
   if (isLoading) return <Spinner />;
 
-  const stats = statsRes?.data;
+  const stats = statsRes?.data as DashboardStats | undefined;
   const ov = stats?.overview;
 
   // Support both response shapes
@@ -40,9 +40,11 @@ export const DashboardPage = () => {
   const unresolvedAlerts = ov?.unresolvedAlerts ?? stats?.unresolvedAlerts ?? 0;
   const blockedIPs = ov?.blockedIPs ?? stats?.blockedIPs ?? 0;
 
-  const loginTotal = stats?.loginStats?.total ?? stats?.totalLoginAttempts ?? 0;
-  const loginSuccess = stats?.loginStats?.successful ?? stats?.successfulLogins ?? 0;
-  const loginFailed = stats?.loginStats?.failed ?? stats?.failedLoginAttempts ?? 0;
+  // loginStats is an array of { date, login_status, count } rows — aggregate totals
+  const loginStatsRows: Array<{ date: string; login_status: string; count: number }> = stats?.loginStats || [];
+  const loginTotal = loginStatsRows.reduce((s, r) => s + Number(r.count), 0) || stats?.totalLoginAttempts || 0;
+  const loginSuccess = loginStatsRows.filter((r) => r.login_status === 'success').reduce((s, r) => s + Number(r.count), 0) || stats?.successfulLogins || 0;
+  const loginFailed = loginStatsRows.filter((r) => r.login_status === 'failed').reduce((s, r) => s + Number(r.count), 0) || stats?.failedLoginAttempts || 0;
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
@@ -137,12 +139,9 @@ export const DashboardPage = () => {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-slate-900 font-mono">{ip.ip_address}</p>
-                      {ip.last_attempt && (
-                        <p className="text-xs text-slate-400">Last: {format(new Date(ip.last_attempt), 'MMM dd HH:mm')}</p>
-                      )}
                     </div>
                   </div>
-                  <Badge variant="indigo">{ip.attempts} attempts</Badge>
+                  <Badge variant="indigo">{ip.count} attempts</Badge>
                 </div>
               ))}
             </div>
@@ -157,7 +156,7 @@ export const DashboardPage = () => {
                   <div className="flex items-center gap-3">
                     <ShieldCheck size={18} className="text-slate-400" />
                     <span className="text-sm font-medium text-slate-900 capitalize">
-                      {a.alert_type.replace(/_/g, ' ')}
+                      {a.severity}
                     </span>
                   </div>
                   <Badge variant="amber">{a.count}</Badge>

@@ -147,14 +147,9 @@ export interface DashboardStats {
     unresolvedAlerts: number;
     blockedIPs: number;
   };
-  loginStats?: {
-    total: number;
-    successful: number;
-    failed: number;
-    blocked: number;
-  };
-  topIPs?: Array<{ ip_address: string; attempts: number; last_attempt: string }>;
-  alertDistribution?: Array<{ alert_type: string; count: number }>;
+  loginStats?: Array<{ date: string; login_status: string; count: number }>;
+  topIPs?: Array<{ ip_address: string; count: number }>;
+  alertDistribution?: Array<{ severity: string; count: number }>;
   totalUsers?: number;
   activeUsers?: number;
   blockedUsers?: number;

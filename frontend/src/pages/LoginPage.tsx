@@ -141,7 +141,7 @@ export const LoginPage = () => {
 
           <div className="mt-8 p-4 bg-slate-100 rounded-xl">
             <p className="text-xs text-slate-500 text-center">
-              Demo: <span className="font-mono text-slate-700">admin</span> / <span className="font-mono text-slate-700">admin123</span>
+              Demo: <span className="font-mono text-slate-700">admin</span> / <span className="font-mono text-slate-700">Admin@123</span>
             </p>
           </div>
 

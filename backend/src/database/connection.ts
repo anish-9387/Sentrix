@@ -38,7 +38,7 @@ export const query = async <T = any>(
   params?: any[]
 ): Promise<T> => {
   try {
-    const [rows] = await pool.execute(sql, params);
+    const [rows] = await pool.query(sql, params);
     return rows as T;
   } catch (error) {
     console.error('Database query error:', error);

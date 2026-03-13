@@ -80,19 +80,19 @@ class LogModel {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const result = await query<ResultSetHeader>(sql, [
-      logData.user_id || null,
-      logData.username,
+      logData.user_id ?? null,
+      logData.username ?? null,
       logData.ip_address,
-      logData.user_agent,
-      logData.device_type,
-      logData.browser,
-      logData.os,
-      logData.country,
-      logData.city,
-      logData.latitude || null,
-      logData.longitude || null,
+      logData.user_agent ?? null,
+      logData.device_type ?? null,
+      logData.browser ?? null,
+      logData.os ?? null,
+      logData.country ?? null,
+      logData.city ?? null,
+      logData.latitude ?? null,
+      logData.longitude ?? null,
       logData.login_status,
-      logData.failure_reason
+      logData.failure_reason ?? null
     ]);
     return result.insertId;
   }
@@ -172,20 +172,20 @@ class LogModel {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const result = await query<ResultSetHeader>(sql, [
-      auditData.user_id || null,
-      auditData.username,
+      auditData.user_id ?? null,
+      auditData.username ?? null,
       auditData.action,
-      auditData.resource_type,
-      auditData.resource_id || null,
-      auditData.endpoint,
-      auditData.method,
-      auditData.ip_address,
-      auditData.user_agent,
-      auditData.request_body,
-      auditData.response_status,
+      auditData.resource_type ?? null,
+      auditData.resource_id ?? null,
+      auditData.endpoint ?? null,
+      auditData.method ?? null,
+      auditData.ip_address ?? null,
+      auditData.user_agent ?? null,
+      auditData.request_body ?? null,
+      auditData.response_status ?? null,
       auditData.success !== undefined ? auditData.success : true,
-      auditData.error_message,
-      auditData.session_id || null
+      auditData.error_message ?? null,
+      auditData.session_id ?? null
     ]);
     return result.insertId;
   }

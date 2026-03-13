@@ -5,7 +5,7 @@ import { securityService } from '../services/securityService';
 import { Card, Badge, Button, Input, Modal, Spinner, EmptyState, PageHeader, StatCard } from '../components/UI';
 import {
   Shield, Wifi, WifiOff, Globe, Clock, Monitor, User, Ban, Plus, Trash2,
-  Activity, X,
+  Activity,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -28,13 +28,14 @@ export const SecurityPage = () => {
 
   // Mutations
   const blockIPMut = useMutation({
-    mutationFn: securityService.blockIP,
+    mutationFn: (data: { ip_address: string; reason?: string; is_permanent?: boolean; duration_hours?: number }) =>
+      securityService.blockIP({ ipAddress: data.ip_address, reason: data.reason || '' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['blocked-ips'] });
       toast.success('IP blocked successfully');
       setShowBlockModal(false);
     },
-    onError: () => toast.error('Failed to block IP'),
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to block IP'),
   });
 
   const unblockIPMut = useMutation({
@@ -59,7 +60,7 @@ export const SecurityPage = () => {
       <PageHeader
         title="Security Management"
         subtitle="Manage blocked IPs and monitor active sessions"
-        action={
+        actions={
           <Button onClick={() => setShowBlockModal(true)} icon={Plus}>
             Block IP
           </Button>
@@ -245,7 +246,8 @@ const BlockIPModal = ({ open, onClose, onSubmit, loading }: BlockModalProps) => 
           label="Reason"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Reason for blocking (optional)"
+          placeholder="Reason for blocking"
+          required
         />
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 cursor-pointer">
