@@ -1,39 +1,98 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { roleService } from '../services/roleService';
 import {
-  Card, Button, Badge, Spinner, EmptyState, Input, Modal, PageHeader, TextArea,
+  Card, Button, Badge, Spinner, EmptyState, Input, Modal, PageHeader, TextArea, ConfirmDialog,
 } from '../components/UI';
 import { ShieldCheck, Plus, Trash2, Key, Settings2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Role, Permission } from '../types';
 
+const parsePermissionNames = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .map((v) => (typeof v === 'string' ? v.trim() : ''))
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
 export const RolesPage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [permRole, setPermRole] = useState<Role | null>(null);
+  const [deleteRole, setDeleteRole] = useState<Role | null>(null);
+  const [permissionsWarningShown, setPermissionsWarningShown] = useState(false);
   const qc = useQueryClient();
 
-  const { data: rolesRes, isLoading: loadingRoles } = useQuery({
+  const {
+    data: rolesRes,
+    isLoading: loadingRoles,
+    isError: rolesError,
+    error: rolesQueryError,
+  } = useQuery({
     queryKey: ['roles'],
     queryFn: () => roleService.getAll(),
   });
 
-  const { data: permsRes, isLoading: loadingPerms } = useQuery({
+  const {
+    data: permsRes,
+    isLoading: loadingPerms,
+    isError: permsError,
+    error: permsQueryError,
+  } = useQuery({
     queryKey: ['permissions'],
     queryFn: () => roleService.getAllPermissions(),
+    retry: false,
   });
+
+  useEffect(() => {
+    if (!permsError || permissionsWarningShown) return;
+
+    const message =
+      (permsQueryError as any)?.response?.data?.message ||
+      'Permission catalog is unavailable for this account. You can still view roles.';
+    toast.error(message);
+    setPermissionsWarningShown(true);
+  }, [permsError, permsQueryError, permissionsWarningShown]);
 
   const deleteMut = useMutation({
     mutationFn: (id: number) => roleService.delete(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['roles'] }); toast.success('Role deleted'); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['roles'] });
+      setDeleteRole(null);
+      toast.success('Role deleted');
+    },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Delete failed'),
   });
 
   if (loadingRoles || loadingPerms) return <Spinner />;
+  if (rolesError) {
+    const roleErrorMessage =
+      (rolesQueryError as any)?.response?.data?.message ||
+      'Could not load roles. Please retry in a moment.';
 
-  const roles: Role[] = rolesRes?.data || [];
-  const permissions: Permission[] = permsRes?.data || [];
+    return (
+      <Card>
+        <EmptyState
+          icon={Settings2}
+          message={roleErrorMessage}
+        />
+      </Card>
+    );
+  }
+
+  const roles: Role[] = Array.isArray(rolesRes?.data) ? rolesRes.data : [];
+  const permissions: Permission[] = Array.isArray(permsRes?.data) ? permsRes.data : [];
+  const permissionsUnavailable = permsError;
 
   // Group permissions by resource/category
   const grouped = permissions.reduce<Record<string, Permission[]>>((acc, p) => {
@@ -86,21 +145,39 @@ export const RolesPage = () => {
                 <div>
                   <p className="text-xs font-medium text-slate-400 uppercase mb-2">Permissions</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {role.permissions ? role.permissions.split(',').map((p, i) => (
-                      <Badge key={i} variant="violet">{p.trim()}</Badge>
-                    )) : <span className="text-xs text-slate-400">No permissions</span>}
+                    {parsePermissionNames(role.permissions).length > 0 ? (
+                      parsePermissionNames(role.permissions).map((p, i) => (
+                        <Badge key={`${role.role_id}-${i}`} variant="violet">{p}</Badge>
+                      ))
+                    ) : (
+                      <span className="text-xs text-slate-400">No permissions</span>
+                    )}
                   </div>
                 </div>
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-1 border-t border-slate-50">
-                  <Button size="sm" variant="secondary" icon={Key} onClick={() => setPermRole(role)}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon={Key}
+                    onClick={() => {
+                      if (permissionsUnavailable) {
+                        toast.error('Permission catalog is unavailable for this account.');
+                        return;
+                      }
+                      setPermRole(role);
+                    }}
+                  >
                     Permissions
                   </Button>
                   {!role.is_system_role && (
-                    <Button size="sm" variant="danger" icon={Trash2} onClick={() => {
-                      if (confirm(`Delete "${role.role_name}"?`)) deleteMut.mutate(role.role_id);
-                    }}>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      icon={Trash2}
+                      onClick={() => setDeleteRole(role)}
+                    >
                       Delete
                     </Button>
                   )}
@@ -114,23 +191,29 @@ export const RolesPage = () => {
       </div>
 
       {/* Permissions Reference */}
-      <Card title="Available Permissions" subtitle="All system permissions grouped by resource">
-        <div className="space-y-6">
-          {Object.entries(grouped).map(([cat, perms]) => (
-            <div key={cat}>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">{cat}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-                {perms.map((p) => (
-                  <div key={p.permission_id} className="p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-colors">
-                    <p className="text-sm font-medium text-slate-900">{p.permission_name}</p>
-                    {p.description && <p className="text-xs text-slate-400 mt-0.5">{p.description}</p>}
-                  </div>
-                ))}
+      {permissionsUnavailable ? (
+        <Card title="Available Permissions" subtitle="Permission catalog is not accessible for this account">
+          <EmptyState icon={Key} message="You can still view roles. Permission management requires additional access." />
+        </Card>
+      ) : (
+        <Card title="Available Permissions" subtitle="All system permissions grouped by resource">
+          <div className="space-y-6">
+            {Object.entries(grouped).map(([cat, perms]) => (
+              <div key={cat}>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">{cat}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+                  {perms.map((p) => (
+                    <div key={p.permission_id} className="p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-colors">
+                      <p className="text-sm font-medium text-slate-900">{p.permission_name}</p>
+                      {p.description && <p className="text-xs text-slate-400 mt-0.5">{p.description}</p>}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </Card>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Create Role Modal */}
       <CreateRoleModal open={createOpen} onClose={() => setCreateOpen(false)} />
@@ -139,6 +222,20 @@ export const RolesPage = () => {
       {permRole && (
         <ManagePermModal role={permRole} permissions={permissions} onClose={() => setPermRole(null)} />
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteRole)}
+        onClose={() => setDeleteRole(null)}
+        onConfirm={() => {
+          if (!deleteRole) return;
+          deleteMut.mutate(deleteRole.role_id);
+        }}
+        title="Delete Role"
+        message={`Are you sure you want to delete "${deleteRole?.role_name || ''}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+        loading={deleteMut.isPending}
+      />
     </div>
   );
 };
@@ -176,7 +273,7 @@ const CreateRoleModal = ({ open, onClose }: { open: boolean; onClose: () => void
 /* ─── Manage Permissions Modal ─── */
 const ManagePermModal = ({ role, permissions, onClose }: { role: Role; permissions: Permission[]; onClose: () => void }) => {
   const qc = useQueryClient();
-  const rolePerms = role.permissions ? role.permissions.split(',').map((p) => p.trim()) : [];
+  const rolePerms = parsePermissionNames(role.permissions);
 
   const assignMut = useMutation({
     mutationFn: (permId: number) => roleService.assignPermission(role.role_id, permId),

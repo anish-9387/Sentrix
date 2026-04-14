@@ -27,12 +27,23 @@ export const useAuthStore = create<AuthState>()(
           const { accessToken, refreshToken, user, sessionId } = res.data;
           localStorage.setItem('accessToken', accessToken);
           localStorage.setItem('refreshToken', refreshToken);
+
+          // Fetch profile to include permission list right after login.
+          let permissions: string[] | undefined;
+          try {
+            const meRes = await authService.me();
+            permissions = Array.isArray(meRes?.data?.permissions) ? meRes.data.permissions : undefined;
+          } catch {
+            // Keep login successful even if profile enrichment fails.
+          }
+
           const authUser: AuthUser = {
             id: user.id,
             username: user.username,
             email: user.email,
             fullName: user.fullName,
             roles: user.roles,
+            permissions,
             accessToken,
             refreshToken,
             sessionId,

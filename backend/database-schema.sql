@@ -319,7 +319,7 @@ WHERE permission_name IN ('user.read', 'role.read');
 -- Create Default Admin User (password: Admin@123)
 -- Note: This password hash is for 'Admin@123' - CHANGE IN PRODUCTION!
 INSERT INTO users (username, email, password_hash, full_name, status, is_email_verified) VALUES
-('admin', 'admin@sentrix.com', '$2b$10$rQ8K9YzW5h7yL8X.Ri.gE.jQ7qYyVx8JH5kz9YzW5h7yL8X.Ri.gEe', 'System Administrator', 'active', TRUE);
+('admin', 'admin@sentrix.com', '$2b$10$Vd3PlvZERduS8YfPrKVLQe8Z1P0hhHaUZKxB/qxI5TANJa0x7SJOG', 'System Administrator', 'active', TRUE);
 
 -- Assign Super Admin role to default admin
 INSERT INTO user_roles (user_id, role_id, assigned_by) VALUES

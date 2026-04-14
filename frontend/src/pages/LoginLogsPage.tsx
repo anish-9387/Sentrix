@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { securityService } from '../services/securityService';
 import { Card, Badge, Spinner, EmptyState, PageHeader, StatCard } from '../components/UI';
 import {
-  Activity, CheckCircle, XCircle, Globe, Clock, Monitor, Shield, Ban,
+  Activity, CheckCircle, XCircle, Globe, Clock, Monitor, Ban,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import type { LoginLog } from '../types';

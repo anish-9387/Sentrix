@@ -14,6 +14,15 @@ const bgMap = {
   sky: 'bg-sky-500',
 } as const;
 
+const iconWrapMap = {
+  indigo: 'bg-indigo-500 shadow-indigo-200',
+  emerald: 'bg-emerald-500 shadow-emerald-200',
+  rose: 'bg-rose-500 shadow-rose-200',
+  amber: 'bg-amber-500 shadow-amber-200',
+  violet: 'bg-violet-500 shadow-violet-200',
+  sky: 'bg-sky-500 shadow-sky-200',
+} as const;
+
 interface StatCardProps {
   icon: LucideIcon;
   label: string;
@@ -26,24 +35,24 @@ export const StatCard = ({ icon: Icon, label, value, trend, color = 'indigo' }: 
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
-    className="relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow"
+    className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-6"
   >
-    <div className="flex items-start justify-between">
-      <div>
-        <p className="text-sm font-medium text-slate-500">{label}</p>
-        <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-slate-500">{label}</p>
+        <p className="mt-1 break-words text-2xl font-bold leading-tight text-slate-900 sm:mt-2 sm:text-3xl">{value}</p>
         {trend && (
           <p className={`mt-1 text-sm font-semibold ${trend.isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
             {trend.isPositive ? '+' : ''}{trend.value}%
           </p>
         )}
       </div>
-      <div className={`${bgMap[color]} rounded-xl p-3 shadow-lg shadow-${color}-200`}>
-        <Icon className="text-white" size={22} />
+      <div className={`${iconWrapMap[color]} flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl shadow-lg sm:h-12 sm:w-12`}>
+        <Icon className="text-white" size={20} />
       </div>
     </div>
     {/* decorative blob */}
-    <div className={`absolute -right-4 -bottom-4 h-24 w-24 rounded-full ${bgMap[color]} opacity-5`} />
+    <div className={`absolute -right-3 -bottom-3 h-16 w-16 rounded-full ${bgMap[color]} opacity-5 sm:-right-4 sm:-bottom-4 sm:h-24 sm:w-24`} />
   </motion.div>
 );
 
@@ -325,6 +334,44 @@ export const Modal = ({ open, onClose, title, children, size = 'md' }: ModalProp
     </div>
   );
 };
+
+interface ConfirmDialogProps {
+  open: boolean;
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: 'danger' | 'primary';
+  loading?: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}
+
+export const ConfirmDialog = ({
+  open,
+  title,
+  message,
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
+  variant = 'danger',
+  loading = false,
+  onConfirm,
+  onClose,
+}: ConfirmDialogProps) => (
+  <Modal open={open} onClose={onClose} title={title} size="sm">
+    <div className="space-y-4">
+      <p className="text-sm text-slate-600">{message}</p>
+      <div className="flex justify-end gap-2">
+        <Button variant="secondary" onClick={onClose} disabled={loading}>
+          {cancelText}
+        </Button>
+        <Button variant={variant} onClick={onConfirm} loading={loading}>
+          {confirmText}
+        </Button>
+      </div>
+    </div>
+  </Modal>
+);
 
 /* ═══════════════════════════════════════════════════════════
    SPINNER / EMPTY STATE / PAGE HEADER

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { userService } from '../services/userService';
 import { roleService } from '../services/roleService';
 import {
-  Card, Button, Badge, Spinner, EmptyState, Input, Modal, PageHeader, Select,
+  Card, Button, Badge, Spinner, EmptyState, Input, Modal, PageHeader, Select, ConfirmDialog,
 } from '../components/UI';
 import {
   Users, Plus, Trash2, Search, ShieldCheck, Ban, CheckCircle, UserRoundPlus, Eye,
@@ -18,6 +18,7 @@ export const UsersPage = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [roleModalUser, setRoleModalUser] = useState<User | null>(null);
   const [detailUser, setDetailUser] = useState<User | null>(null);
+  const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const qc = useQueryClient();
 
   const { data: usersRes, isLoading } = useQuery({
@@ -32,7 +33,11 @@ export const UsersPage = () => {
 
   const deleteMut = useMutation({
     mutationFn: (id: number) => userService.delete(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); toast.success('User deleted'); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] });
+      setDeleteUser(null);
+      toast.success('User deleted');
+    },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Delete failed'),
   });
 
@@ -133,9 +138,12 @@ export const UsersPage = () => {
                         >
                           {u.status === 'active' ? 'Block' : 'Activate'}
                         </Button>
-                        <Button size="xs" variant="ghost" icon={Trash2} onClick={() => {
-                          if (confirm('Delete this user?')) deleteMut.mutate(u.user_id);
-                        }}>
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          icon={Trash2}
+                          onClick={() => setDeleteUser(u)}
+                        >
                           Delete
                         </Button>
                       </div>
@@ -192,6 +200,20 @@ export const UsersPage = () => {
           </div>
         </Modal>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteUser)}
+        onClose={() => setDeleteUser(null)}
+        onConfirm={() => {
+          if (!deleteUser) return;
+          deleteMut.mutate(deleteUser.user_id);
+        }}
+        title="Delete User"
+        message={`Are you sure you want to delete "${deleteUser?.username || ''}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+        loading={deleteMut.isPending}
+      />
     </div>
   );
 };
