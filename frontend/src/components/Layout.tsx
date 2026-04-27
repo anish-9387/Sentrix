@@ -59,6 +59,7 @@ export const MainLayout = () => {
     !hasPermissionData ||
     userPermissions.includes('alerts.read') ||
     userPermissions.includes('alerts.manage');
+  const hasAccessToken = !!localStorage.getItem('accessToken');
 
   const visibleNavItems = useMemo(
     () =>
@@ -103,7 +104,7 @@ export const MainLayout = () => {
     queryKey: ['unresolved-alerts-count'],
     queryFn: () => securityService.getUnresolvedAlerts(),
     refetchInterval: 30000,
-    enabled: canReadAlerts,
+    enabled: canReadAlerts && hasAccessToken,
   });
 
   const unresolvedCount = Array.isArray(unresolvedData?.data) ? unresolvedData.data.length : 0;

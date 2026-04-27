@@ -6,17 +6,19 @@ interface Props { children?: ReactNode }
 
 export const ProtectedRoute = ({ children }: Props) => {
   const { isAuthenticated, user, refreshUser } = useAuthStore();
+  const hasAccessToken = !!localStorage.getItem('accessToken');
 
   useEffect(() => {
     if (isAuthenticated && !user) refreshUser();
   }, [isAuthenticated, user, refreshUser]);
 
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated || !hasAccessToken) return <Navigate to="/login" replace />;
   return <>{children || <Outlet />}</>;
 };
 
 export const PublicRoute = ({ children }: Props) => {
   const { isAuthenticated } = useAuthStore();
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  const hasAccessToken = !!localStorage.getItem('accessToken');
+  if (isAuthenticated && hasAccessToken) return <Navigate to="/dashboard" replace />;
   return <>{children || <Outlet />}</>;
 };

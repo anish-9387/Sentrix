@@ -47,10 +47,12 @@ export const DashboardPage = () => {
 };
 
 const AdminDashboard = () => {
+  const hasAccessToken = !!localStorage.getItem('accessToken');
   const { data: statsRes, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: () => securityService.getDashboardStats(),
     refetchInterval: 30000,
+    enabled: hasAccessToken,
   });
 
   if (isLoading) return <Spinner />;
@@ -248,11 +250,13 @@ const AdminDashboard = () => {
 
 const UserDashboard = () => {
   const { user } = useAuthStore();
+  const hasAccessToken = !!localStorage.getItem('accessToken');
 
   const { data: activityRes, isLoading } = useQuery({
     queryKey: ['my-dashboard-activity'],
     queryFn: () => authService.myActivity(30),
     refetchInterval: 30000,
+    enabled: hasAccessToken,
   });
 
   if (isLoading) return <Spinner />;

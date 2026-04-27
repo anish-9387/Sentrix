@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
+let isRedirectingToLogin = false;
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -36,7 +37,11 @@ api.interceptors.response.use(
       } catch {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
+        localStorage.removeItem('sentrix-auth');
+        if (!isRedirectingToLogin) {
+          isRedirectingToLogin = true;
+          window.location.href = '/login';
+        }
         return Promise.reject(error);
       }
     }
