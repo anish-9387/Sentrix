@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import userController from '../controllers/user.controller';
 import { authenticate } from '../middlewares/auth.middleware';
-import { requirePermission } from '../middlewares/rbac.middleware';
+import { requireAnyPermission, requirePermission } from '../middlewares/rbac.middleware';
 import { auditAction } from '../middlewares/audit.middleware';
 
 const router : Router = Router();
@@ -21,6 +21,15 @@ router.get(
   '/search',
   requirePermission('user.read'),
   userController.searchUsers
+);
+
+// Export a user's login history
+router.get(
+  '/:id/login-history/export',
+  requirePermission('user.read'),
+  requireAnyPermission(['logs.export', 'logs.read']),
+  auditAction('EXPORT_USER_LOGIN_HISTORY', 'user'),
+  userController.exportUserLoginHistory
 );
 
 // Get user by ID

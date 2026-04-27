@@ -29,7 +29,7 @@ export const LoginPage = () => {
         initial={{ opacity: 0, x: -40 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.6 }}
-        className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-950 relative overflow-hidden"
+        className="hidden lg:flex lg:w-1/2 bg-linear-to-br from-slate-900 via-indigo-950 to-violet-950 relative overflow-hidden"
       >
         {/* Background grid */}
         <div className="absolute inset-0 opacity-10" style={{

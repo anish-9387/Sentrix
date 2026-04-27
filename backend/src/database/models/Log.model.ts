@@ -97,25 +97,48 @@ class LogModel {
     return result.insertId;
   }
 
-  // Get login logs with pagination
-  async getLoginLogs(limit: number = 100, offset: number = 0): Promise<LoginLog[]> {
-    const sql = `
-      SELECT * FROM login_logs 
-      ORDER BY attempted_at DESC 
-      LIMIT ? OFFSET ?
-    `;
-    return await query<LoginLog[]>(sql, [limit, offset]);
+  // Get login logs with pagination and optional status filter
+  async getLoginLogs(
+    limit: number = 100,
+    offset: number = 0,
+    status?: LoginLog['login_status']
+  ): Promise<LoginLog[]> {
+    const params: Array<number | string> = [];
+    let sql = 'SELECT * FROM login_logs';
+
+    if (status) {
+      sql += ' WHERE login_status = ?';
+      params.push(status);
+    }
+
+    sql += ' ORDER BY attempted_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    return await query<LoginLog[]>(sql, params);
   }
 
   // Get login logs by user
-  async getLoginLogsByUser(userId: number, limit: number = 50): Promise<LoginLog[]> {
-    const sql = `
-      SELECT * FROM login_logs 
-      WHERE user_id = ? 
-      ORDER BY attempted_at DESC 
-      LIMIT ?
-    `;
-    return await query<LoginLog[]>(sql, [userId, limit]);
+  async getLoginLogsByUser(
+    userId: number,
+    limit?: number,
+    status?: LoginLog['login_status']
+  ): Promise<LoginLog[]> {
+    const params: Array<number | string> = [userId];
+    let sql = 'SELECT * FROM login_logs WHERE user_id = ?';
+
+    if (status) {
+      sql += ' AND login_status = ?';
+      params.push(status);
+    }
+
+    sql += ' ORDER BY attempted_at DESC';
+
+    if (typeof limit === 'number') {
+      sql += ' LIMIT ?';
+      params.push(limit);
+    }
+
+    return await query<LoginLog[]>(sql, params);
   }
 
   // Get failed login attempts

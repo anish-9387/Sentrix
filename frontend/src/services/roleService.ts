@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { api } from '../lib/axios';
 import type { Permission, Role } from '../types';
 

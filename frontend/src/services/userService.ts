@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { api } from '../lib/axios';
 import type { User } from '../types';
 
@@ -60,4 +61,11 @@ export const userService = {
 
   removeRole: (userId: number, roleId: number) =>
     api.delete(`/users/${userId}/roles`, { data: { roleId } }).then((r) => r.data),
+
+  exportLoginHistoryExcel: async (userId: number): Promise<Blob> => {
+    const response = await api.get(`/users/${userId}/login-history/export`, {
+      responseType: 'blob',
+    });
+    return response.data as Blob;
+  },
 };

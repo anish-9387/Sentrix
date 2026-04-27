@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import UserModel from '../database/models/User.model';
 import RoleModel from '../database/models/Role.model';
+import LogModel from '../database/models/Log.model';
 import passwordService from '../services/password.service';
+import * as XLSX from 'xlsx';
 
 class UserController {
   /**
@@ -368,6 +370,87 @@ class UserController {
       res.status(500).json({
         success: false,
         message: 'An error occurred while removing role.'
+      });
+    }
+  }
+
+  /**
+   * Export user login history to Excel
+   */
+  async exportUserLoginHistory(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = parseInt(req.params.id, 10);
+
+      if (Number.isNaN(userId)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid user ID.'
+        });
+        return;
+      }
+
+      const user = await UserModel.findById(userId);
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: 'User not found.'
+        });
+        return;
+      }
+
+      const logs = await LogModel.getLoginLogsByUser(userId);
+
+      const rows: Array<Array<string | number>> = [
+        ['Log ID', 'Username', 'Status', 'IP Address', 'Country', 'City', 'Browser', 'OS', 'Device', 'Failure Reason', 'Attempted At']
+      ];
+
+      logs.forEach((log) => {
+        rows.push([
+          log.log_id,
+          log.username || user.username,
+          log.login_status,
+          log.ip_address,
+          log.country || '',
+          log.city || '',
+          log.browser || '',
+          log.os || '',
+          log.device_type || '',
+          log.failure_reason || '',
+          log.attempted_at ? new Date(log.attempted_at).toISOString() : ''
+        ]);
+      });
+
+      const worksheet = XLSX.utils.aoa_to_sheet(rows);
+      worksheet['!cols'] = [
+        { wch: 8 },
+        { wch: 18 },
+        { wch: 12 },
+        { wch: 18 },
+        { wch: 16 },
+        { wch: 16 },
+        { wch: 18 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 40 },
+        { wch: 24 }
+      ];
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Login History');
+
+      const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+      const safeUsername = user.username.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      const filename = `${safeUsername}_login_history_${dateStamp}.xlsx`;
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.status(200).send(buffer);
+    } catch (error) {
+      console.error('Export user login history error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'An error occurred while exporting user login history.'
       });
     }
   }

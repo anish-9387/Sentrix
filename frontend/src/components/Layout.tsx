@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
@@ -138,7 +139,7 @@ export const MainLayout = () => {
               : 'text-slate-300 hover:text-white hover:bg-slate-800'
           }`}
         >
-          <Icon size={20} className="flex-shrink-0" />
+          <Icon size={20} className="shrink-0" />
           <span className="text-sm font-medium whitespace-nowrap overflow-hidden">{item.label}</span>
           {active && <ChevronRight size={16} className="ml-auto opacity-60" />}
           {item.path === '/alerts' && unresolvedCount > 0 && (
@@ -160,8 +161,8 @@ export const MainLayout = () => {
             : 'text-slate-400 hover:text-white hover:bg-slate-800'
         } justify-center lg:group-hover/sidebar:justify-start`}
       >
-        <Icon size={20} className="flex-shrink-0" />
-        <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium opacity-0 transition-all duration-150 lg:group-hover/sidebar:ml-3 lg:group-hover/sidebar:max-w-[13rem] lg:group-hover/sidebar:opacity-100">
+        <Icon size={20} className="shrink-0" />
+        <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium opacity-0 transition-all duration-150 lg:group-hover/sidebar:ml-3 lg:group-hover/sidebar:max-w-52 lg:group-hover/sidebar:opacity-100">
           {item.label}
         </span>
         <ChevronRight
@@ -185,10 +186,10 @@ export const MainLayout = () => {
       {/* Desktop Sidebar: icon-only by default, expands on hover */}
       <aside className="group/sidebar hidden lg:flex lg:w-20 lg:hover:w-72 transition-[width] duration-300 ease-out flex-col overflow-hidden border-r border-slate-800 bg-slate-900 text-white">
         <div className="h-16 flex items-center border-b border-slate-800 px-4 gap-3">
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-600">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600">
             <Fingerprint size={20} />
           </div>
-          <span className="max-w-0 overflow-hidden whitespace-nowrap text-lg font-bold opacity-0 transition-all duration-200 lg:group-hover/sidebar:max-w-[10rem] lg:group-hover/sidebar:opacity-100">
+          <span className="max-w-0 overflow-hidden whitespace-nowrap text-lg font-bold opacity-0 transition-all duration-200 lg:group-hover/sidebar:max-w-40 lg:group-hover/sidebar:opacity-100">
             Sentrix
           </span>
         </div>
@@ -199,10 +200,10 @@ export const MainLayout = () => {
 
         <div className="border-t border-slate-800 p-3">
           <div className="flex items-center rounded-xl bg-slate-800 px-3 py-2 justify-center lg:group-hover/sidebar:justify-start">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+            <div className="h-8 w-8 rounded-full bg-linear-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-sm font-bold text-white shrink-0">
               {userName[0]?.toUpperCase() || 'U'}
             </div>
-            <div className="max-w-0 overflow-hidden opacity-0 transition-all duration-200 lg:group-hover/sidebar:ml-3 lg:group-hover/sidebar:max-w-[11rem] lg:group-hover/sidebar:opacity-100">
+            <div className="max-w-0 overflow-hidden opacity-0 transition-all duration-200 lg:group-hover/sidebar:ml-3 lg:group-hover/sidebar:max-w-44 lg:group-hover/sidebar:opacity-100">
               <p className="truncate text-sm font-medium text-white">{userName}</p>
               <p className="truncate text-xs text-slate-400">{user?.email}</p>
             </div>
@@ -211,8 +212,8 @@ export const MainLayout = () => {
             onClick={handleLogout}
             className="mt-2 w-full flex items-center rounded-xl px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer justify-center lg:group-hover/sidebar:justify-start"
           >
-            <LogOut size={18} className="flex-shrink-0" />
-            <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm opacity-0 transition-all duration-200 lg:group-hover/sidebar:ml-3 lg:group-hover/sidebar:max-w-[8rem] lg:group-hover/sidebar:opacity-100">
+            <LogOut size={18} className="shrink-0" />
+            <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm opacity-0 transition-all duration-200 lg:group-hover/sidebar:ml-3 lg:group-hover/sidebar:max-w-32 lg:group-hover/sidebar:opacity-100">
               Logout
             </span>
           </button>
@@ -241,7 +242,7 @@ export const MainLayout = () => {
               className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col overflow-hidden border-r border-slate-800 bg-slate-900 text-white lg:hidden"
             >
               <div className="h-16 flex items-center border-b border-slate-800 px-4 gap-3">
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-600">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600">
                   <Fingerprint size={20} />
                 </div>
                 <span className="text-lg font-bold">Sentrix</span>
@@ -260,7 +261,7 @@ export const MainLayout = () => {
 
               <div className="border-t border-slate-800 p-3 space-y-2">
                 <div className="flex items-center gap-3 rounded-xl bg-slate-800 px-3 py-2">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-sm font-bold text-white">
+                  <div className="h-8 w-8 rounded-full bg-linear-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-sm font-bold text-white">
                     {userName[0]?.toUpperCase() || 'U'}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -282,7 +283,7 @@ export const MainLayout = () => {
       </AnimatePresence>
 
       <div className="flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden">
-        <header className="h-16 flex-shrink-0 border-b border-slate-100 bg-white px-4 sm:px-6 flex items-center justify-between">
+        <header className="h-16 shrink-0 border-b border-slate-100 bg-white px-4 sm:px-6 flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <button
               onClick={() => setMobileMenuOpen(true)}
@@ -313,7 +314,7 @@ export const MainLayout = () => {
               <span className="font-semibold text-slate-900">{userName}</span>
             </div>
 
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-sm font-bold text-white">
+            <div className="h-8 w-8 rounded-full bg-linear-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-sm font-bold text-white">
               {userName[0]?.toUpperCase() || 'U'}
             </div>
           </div>

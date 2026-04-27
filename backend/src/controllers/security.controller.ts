@@ -13,8 +13,21 @@ class SecurityController {
       const limit = parseInt(req.query.limit as string) || 100;
       const page = parseInt(req.query.page as string) || 1;
       const offset = (page - 1) * limit;
+      const rawStatus = typeof req.query.status === 'string'
+        ? req.query.status.toLowerCase().trim()
+        : undefined;
+      const allowedStatuses = ['success', 'failed', 'blocked'] as const;
 
-      const logs = await LogModel.getLoginLogs(limit, offset);
+      if (rawStatus && !allowedStatuses.includes(rawStatus as typeof allowedStatuses[number])) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid status filter. Use one of: success, failed, blocked.'
+        });
+        return;
+      }
+
+      const status = rawStatus as 'success' | 'failed' | 'blocked' | undefined;
+      const logs = await LogModel.getLoginLogs(limit, offset, status);
 
       res.status(200).json({
         success: true,

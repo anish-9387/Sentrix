@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -14,7 +15,8 @@ import toast from 'react-hot-toast';
 import type { User, Role } from '../types';
 
 export const UsersPage = () => {
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [roleModalUser, setRoleModalUser] = useState<User | null>(null);
   const [detailUser, setDetailUser] = useState<User | null>(null);
@@ -22,8 +24,8 @@ export const UsersPage = () => {
   const qc = useQueryClient();
 
   const { data: usersRes, isLoading } = useQuery({
-    queryKey: ['users', search],
-    queryFn: () => (search ? userService.search(search) : userService.getAll()),
+    queryKey: ['users', searchQuery],
+    queryFn: () => (searchQuery ? userService.search(searchQuery) : userService.getAll()),
   });
 
   const { data: rolesRes } = useQuery({
@@ -51,6 +53,39 @@ export const UsersPage = () => {
   const statusColor = (s: string) =>
     s === 'active' ? 'emerald' : s === 'blocked' ? 'rose' : s === 'suspended' ? 'amber' : 'slate';
 
+  const applySearch = () => {
+    setSearchQuery(searchInput.trim());
+  };
+
+  const clearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+  };
+
+  const exportUserLoginHistory = async (user: User) => {
+    try {
+      const blob = await userService.exportLoginHistoryExcel(user.user_id);
+      const baseName = (user.full_name || user.username || `user_${user.user_id}`)
+        .replace(/[^a-zA-Z0-9_-]+/g, '_')
+        .toLowerCase();
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      const fileName = `${baseName}_login_history_${dateStamp}.xlsx`;
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success(`Exported login history for ${user.full_name || user.username}`);
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Failed to export login history');
+    }
+  };
+
   if (isLoading) return <Spinner />;
   const users: User[] = usersRes?.data?.users || usersRes?.data || [];
   const roles: Role[] = rolesRes?.data || [];
@@ -69,12 +104,25 @@ export const UsersPage = () => {
 
       {/* Search */}
       <Card>
-        <Input
-          placeholder="Search by name, email, or username..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          icon={Search}
-        />
+        <div className="space-y-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              className="flex-1"
+              placeholder="Search by full name, email, or username..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') applySearch();
+              }}
+              icon={Search}
+            />
+            <Button variant="secondary" onClick={applySearch}>Search</Button>
+            {(searchInput || searchQuery) && (
+              <Button variant="ghost" onClick={clearSearch}>Clear</Button>
+            )}
+          </div>
+          <p className="text-xs text-slate-400">Search runs only when you press Enter or click Search.</p>
+        </div>
       </Card>
 
       {/* Table */}
@@ -100,7 +148,7 @@ export const UsersPage = () => {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                        <div className="h-9 w-9 rounded-full bg-linear-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
                           {(u.full_name || u.username)[0].toUpperCase()}
                         </div>
                         <div>
@@ -145,6 +193,13 @@ export const UsersPage = () => {
                           onClick={() => setDeleteUser(u)}
                         >
                           Delete
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant="secondary"
+                          onClick={() => exportUserLoginHistory(u)}
+                        >
+                          Export Excel
                         </Button>
                       </div>
                     </td>

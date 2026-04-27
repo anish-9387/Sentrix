@@ -40,14 +40,14 @@ export const StatCard = ({ icon: Icon, label, value, trend, color = 'indigo' }: 
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-slate-500">{label}</p>
-        <p className="mt-1 break-words text-2xl font-bold leading-tight text-slate-900 sm:mt-2 sm:text-3xl">{value}</p>
+        <p className="mt-1 wrap-break-word text-2xl font-bold leading-tight text-slate-900 sm:mt-2 sm:text-3xl">{value}</p>
         {trend && (
           <p className={`mt-1 text-sm font-semibold ${trend.isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
             {trend.isPositive ? '+' : ''}{trend.value}%
           </p>
         )}
       </div>
-      <div className={`${iconWrapMap[color]} flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl shadow-lg sm:h-12 sm:w-12`}>
+      <div className={`${iconWrapMap[color]} flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-lg sm:h-12 sm:w-12`}>
         <Icon className="text-white" size={20} />
       </div>
     </div>
@@ -191,6 +191,7 @@ interface InputProps {
   placeholder?: string;
   value: string | number;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   error?: string;
   icon?: LucideIcon;
   required?: boolean;
@@ -206,6 +207,7 @@ export const Input = ({
   placeholder,
   value,
   onChange,
+  onKeyDown,
   error,
   icon: Icon,
   required,
@@ -230,6 +232,7 @@ export const Input = ({
         type={type}
         value={value}
         onChange={onChange}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
         required={required}
         disabled={disabled}

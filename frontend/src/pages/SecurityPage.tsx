@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -153,7 +154,7 @@ export const SecurityPage = () => {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
+                        <div className="w-7 h-7 rounded-full bg-linear-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
                           <User size={14} className="text-white" />
                         </div>
                         <span className="text-sm font-medium text-slate-900">{s.username || `User #${s.user_id}`}</span>
