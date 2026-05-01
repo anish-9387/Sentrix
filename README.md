@@ -212,13 +212,3 @@ Most routes require authentication and proper RBAC permissions.
 From the Users page, each user row includes an `Export Excel` action.
 
 This downloads an `.xlsx` file containing that user's login history, including status, IP, location, browser/OS, and timestamp fields.
-
-
-### MySQL connection issues
-
-- Verify `.env` DB values (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`).
-- Ensure MySQL service is running before backend startup.
-
-
-## License
-MIT
